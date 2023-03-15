@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Flask SQL Tutorial</title>
+  </head>
+  <body>
+    <form action="{{ url_for('register')}}" method="post">
+      <h5>Enter the user Details</h5>
+      <div>
+        <input type="text" name="name" placeholder="name" />
+      </div>
+      <div>
+        <input type="text" name="surname" placeholder="surname" />
+      </div>
+      <div>
+        <input type="text" name="depart" placeholder="depart" />
+      </div>
+      <div>
+        <input type="text" name="year" placeholder="year" />
+      </div>
+      <div>
+        <input type="text" name="sid" placeholder="sid" />
+      </div>
+      <div>
+        <input type="text" name="password" placeholder="password" />
+      </div>
+      <div>
+        <button>Submit</button>
+      </div>
+    </form>
+  </body>
+  <script>
+    $(document).ready(function () {
+      $("button").click(function (event) {
+        var the_id = event.target.id;
+        $.ajax({
+          url: "/register",
+          type: "get",
+          data: { name: password },
+          success: function (response) {
+            $("#response").html(response);
+          },
+          error: function (xhr) {
+            //Do Something to handle error
+          },
+        });
+      });
+    });
+  </script>
+</html>
