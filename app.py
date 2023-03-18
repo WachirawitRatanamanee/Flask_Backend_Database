@@ -58,7 +58,7 @@ def login():
             access_token = create_access_token(identity=userinfo)
             return {"access_token":access_token, "role":userinfo["role"]}
     return {"msg":"Wrong user ID or password."}
-
+#TEST
 @api.route('/register', methods=['POST'])
 def register():
     name = request.form['name']
