@@ -6,12 +6,14 @@ from datetime import datetime, timedelta, timezone
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 api = Flask(__name__)
 CORS(api)
 #
 api.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 api.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(api)
+
 
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
