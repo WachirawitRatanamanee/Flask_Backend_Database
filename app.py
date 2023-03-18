@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 api = Flask(__name__)
 CORS(api)
-
+#3
 api.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 api.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(api)
