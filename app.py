@@ -1,22 +1,143 @@
 from flask import Flask, jsonify, redirect, url_for, request
 from flask_cors import CORS
-from flask_jwt_extended import  create_access_token, get_jwt, get_jwt_identity \
-                                ,unset_jwt_cookies, jwt_required, JWTManager
+from flask_jwt_extended import  create_access_token, get_jwt, get_jwt_identity ,unset_jwt_cookies, jwt_required, JWTManager
 from datetime import datetime, timedelta, timezone
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
 
+app = Flask(__name__)
+CORS(app)
 
-api = Flask(__name__)
-CORS(api)
-#
-api.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
-api.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
-jwt = JWTManager(api)
-
+app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+jwt = JWTManager(app)
 
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
+
+@app.route('/admin_control', methods = ['POST','DELETE'])
+def admin_control():
+    if request.method == 'POST':
+        name = request.form['name']
+        lastName = request.form['lastName']
+        adminId = request.form['adminId']
+        password = hash(request.form['password'])
+        cursor = mysql.connection.cursor()
+        #INSERT TO DB just tried, should renovate VVV
+        cursor.execute(''' INSERT INTO jiwjiw(name, lastname) VALUES(%s,%s)''',(adminId,password))
+        mysql.connection.commit()
+        cursor.close()
+        return f"add admin success!!"
+    if request.method == 'DELETE':
+        deleteAdminId = request.form['deleteAdminId']
+        cursor = mysql.connection.cursor()
+        #DELETE FROM DB just tried, should renovate VVV
+        cursor.execute(''' DELETE FROM jiwjiw WHERE id = (%s)''',(deleteAdminId))
+        mysql.connection.commit()
+        cursor.close()
+        return f"delete admin success!!"
+
+@app.route('/admin_equipment',methods=['GET','DELETE'])
+def admin_equipment():
+    if request.method == 'GET':
+        total_data = 'Just prevent from Error' #Query [equipmentID,Title_eq, Status , img ,sid,department,year,expiredate ]
+        results = [
+                {
+                    "equipmentID": 1,
+                    "Title_eq": 1,
+                    "Status": 1,
+                    "img": 1,
+                    "sid": 1,
+                    "department": 1,
+                    "year": 1,
+                    "expiredate": 1,
+                } for each_data in total_data]
+        return {"data": results}
+    if request.method == 'DELETE':
+        equipmentID = request.form['equipmentID']
+        Title_eq = request.form['Title_eq']
+        Status = request.form['Status']
+        img = request.form['img']
+        sid = request.form['sid']
+        department = request.form['department']
+        year = request.form['year']
+        cursor = mysql.connection.cursor()
+        #DELETE FROM DB just tried, should renovate VVV
+        cursor.execute(''' DELETE FROM jiwjiw WHERE id = (%s)''',(equipmentID))
+        mysql.connection.commit()
+        cursor.close()
+        return f"delete equipment success!!"
+    if request.method == 'PUT': 
+        EQ_Title = request.form['EQ_Title']
+        EQ_ID = request.form['EQ_ID']
+        Img = request.form['Img']
+        cursor = mysql.connection.cursor()
+        #edit equipment VVV
+        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
+        mysql.connection.commit()
+        cursor.close()
+        return f"update status equipment success!!"
+    if request.method == 'POST':
+        EQ_Title = request.form['EQ_Title']
+        EQ_ID = request.form['EQ_ID']
+        Status = request.form['Status']
+        Borrow_date = request.form['Borrow_date']
+        Return_date = request.form['Return_date']
+        cursor = mysql.connection.cursor()
+        #INSERT EQUIPMENT
+        cursor.execute(''' INSERT INTO jiwjiw ''')
+        mysql.connection.commit()
+        cursor.close()
+        return f"update status equipment success!!"
+    
+@app.route('/admin-request',methods=['GET','PUT','POST','DELETE'])
+def request_equipment():
+    if request.method == 'GET':
+        total_data = 'Just prevent from Error' #Query [ID,Title ,std_id,EQID , img,expiredate ]
+        results = [
+                {
+                    "ID": 1,
+                    "Title": 1,
+                    "std_id": 1,
+                    "EQID": 1,
+                    "img": 1,
+                    "expiredate": 1,
+                } for each_data in total_data]
+        return {"data": results}
+    if request.method == 'PUT':
+        ID = request.form['ID']
+        Title = request.form['Title']
+        std_idEQ = request.form['std_idEQ']
+        img = request.form['img']
+        expiredate = request.form['expiredate']
+        cursor = mysql.connection.cursor()
+        #UPDATE to borrowed from available VVV
+        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(ID))
+        mysql.connection.commit()
+        cursor.close()
+        return f"update status equipment success!!"
+    if request.method == 'POST': 
+        EQ_ID = request.form['EQ_ID']
+        Tittle_EQ = request.form['Tittle_EQ']
+        Status = request.form['Status']
+        cursor = mysql.connection.cursor()
+        #UPDATE status to notav VVV
+        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
+        mysql.connection.commit()
+        cursor.close()
+        return f"update status equipment success!!"
+    if request.method == 'DELETE':
+        EQ_ID = request.form['EQ_ID']
+        Tittle_EQ = request.form['Tittle_EQ']
+        Status = request.form['Status']
+        Expireddate = request.form['Expireddate']
+        Returndate = request.form['Returndate']
+        cursor = mysql.connection.cursor()
+        #UPDATE status to av VVV
+        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
+        mysql.connection.commit()
+        cursor.close()
+        return f"update status equipment success!!"
 
 mock_equipment_data = [("456135461451","Oscillator"), ("545196164665","Multimeter")]
 
@@ -30,7 +151,7 @@ def find_account(user, password):
         if check_password_hash(mock_admins_data[user]["password"], password):
             return {"user_id":user, "role":"admin"}
 
-@api.after_request
+@app.after_request
 def refresh_expiring_jwts(response):
     try:
         exp_timestamp = get_jwt()["exp"]
@@ -47,7 +168,7 @@ def refresh_expiring_jwts(response):
         # Case where there is not a valid JWT. Just return the original respone
         return response
 
-@api.route('/login', methods=["POST"])
+@app.route('/login', methods=["POST"])
 def login():
     if request.method == "POST" and "sid" in request.form and "password" in request.form:
         user = request.form["sid"]
@@ -61,7 +182,7 @@ def login():
             return {"access_token":access_token, "role":userinfo["role"]}
     return {"msg":"Wrong user ID or password."}
 #TEST
-@api.route('/register', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def register():
     name = request.form['name']
     lastname = request.form['surname']
@@ -79,7 +200,7 @@ def register():
     else:
         return {"msg":"This id is already registered."}
 
-@api.route('/available_equipments', methods=["GET", "POST"])
+@app.route('/available_equipments', methods=["GET", "POST"])
 def available_equipments():
     if request.method == "GET":
         #ดึงข้อมูล equipment ทั้งหมด
@@ -92,7 +213,7 @@ def available_equipments():
         except:
             return {}
 
-@api.route('/<string:sid>/borrowing', methods=["GET"])
+@app.route('/<string:sid>/borrowing', methods=["GET"])
 @jwt_required()
 def borrowed_equipments(sid):
     try:
@@ -107,7 +228,7 @@ def borrowed_equipments(sid):
         return {"msg": "Internal server error"}, 500
     
 
-@api.route('/<string:admin_id>/admin_request', methods=["GET", "PUT", "DELETE"])
+@app.route('/<string:admin_id>/admin_request', methods=["GET", "PUT", "DELETE"])
 @jwt_required()
 def requests_page(admin_id):
     if request.method == "GET":
@@ -117,7 +238,7 @@ def requests_page(admin_id):
     elif request.method == "DELETE":
         pass
 
-@api.route('/<string:admin_id>/admin_equipment', methods=["GET", "POST", "DELETE", "PUT"])
+@app.route('/<string:admin_id>/admin_equipment', methods=["GET", "POST", "DELETE", "PUT"])
 @jwt_required()
 def equipment_detail(admin_id):
     if request.method == "GET":
@@ -129,7 +250,7 @@ def equipment_detail(admin_id):
     elif request.method == "DELETE":
         pass
 
-@api.route('/<string:admin_id>/admin_control/add_admin', methods=["POST"])
+@app.route('/<string:admin_id>/admin_control/add_admin', methods=["POST"])
 @jwt_required()
 def edit_admin_member(admin_id):
     try:
@@ -152,7 +273,7 @@ def edit_admin_member(admin_id):
     except:
         return {"msg": "Internal server error"}, 500
 
-@api.route("/<string:admin_id>/admin_control/delete_admin/<string:delete_id>", methods=["DELETE"])
+@app.route("/<string:admin_id>/admin_control/delete_admin/<string:delete_id>", methods=["DELETE"])
 @jwt_required()
 def delete_admin(admin_id, delete_id):
     try:
@@ -169,11 +290,11 @@ def delete_admin(admin_id, delete_id):
     except:
         return {"msg": "Internal server error"}, 500
 
-@api.route("/logout", methods=["POST"])
+@app.route("/logout", methods=["POST"])
 def logout():
     response = jsonify({"msg": "logout successful"})
     unset_jwt_cookies(response)
     return response
 
 if __name__ == "__main__":
-    api.run(host='localhost', debug = True, port=5000)
+    app.run(host='localhost', debug = True, port=5000)
