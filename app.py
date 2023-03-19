@@ -5,6 +5,7 @@ from flask_jwt_extended import  create_access_token, get_jwt, get_jwt_identity \
 from datetime import datetime, timedelta, timezone, date
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
+import base64
 
 app = Flask(__name__)
 CORS(app)
@@ -16,7 +17,7 @@ jwt = JWTManager(app)
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
 
-mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Available","Robotic lab"), ("545196164665","SUNWA-1962","Multimeter","Measurment","Available","Electrical lab")]
+mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab",""), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","")]
 mock_material_data = []
 
 mock_borrow_data = [("456135461451","s6401012620234", str(date(2023,3,19)), str(date(2023,4,19)), "08spn491324619")]
@@ -83,8 +84,8 @@ def register():
         return {"msg":"This id is already registered."}
 
 @app.route('/equipments', methods=["GET"])
-def available_equipments():
-    response = {}
+def equipments_lists():
+    response = []
     count = 0
     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
     for eqm in mock_equipment_data:
@@ -99,18 +100,19 @@ def available_equipments():
                 s_dep = mock_users_data[sid]["major"]
                 s_year = mock_users_data[sid]["year"]
                 break
-        response[str(count)] =  {   
-                                    "id":eqm_id,
-                                    "title":eqm[1],
-                                    "type":eqm[2],
-                                    "category":eqm[3],
-                                    "system": eqm[4],
-                                    "location": eqm[5],
-                                    "department":s_dep,
-                                    "year":s_year,
-                                    "studentid": sid,
-                                    "image": ''
-                                }
+
+        response.append(    {   
+                                "id":eqm_id,
+                                "title":eqm[1],
+                                "type":eqm[2],
+                                "category":eqm[3],
+                                "status": eqm[4],
+                                "location": eqm[5],
+                                "department":s_dep,
+                                "year":s_year,
+                                "studentid": sid,
+                                "image": ''
+                            })
     return jsonify(response)
 
 @app.route('/<string:sid>/borrowing', methods=["GET"])
@@ -120,8 +122,22 @@ def borrowed_equipments(sid):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == sid and decoded["sub"]["role"] == "user":
-                #ดึงข้อมูล equipment ทุก equipment ที่ user คนนี้ยืม
-                return {"msg":"correct"}
+                response = []
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                for borrow in mock_borrow_data:
+                    if borrow[1] == sid:
+                        for eqm in mock_equipment_data:
+                            if eqm[0] == borrow[0]:
+                                response.append( { "id":eqm[0],
+                                                    "title":eqm[1],
+                                                    "type":eqm[2],
+                                                    "category":eqm[3],
+                                                    "status": eqm[4],
+                                                    "location": eqm[5],
+                                                    "img":""
+                                                    })
+                                break
+                return jsonify(response)
             return {"msg":"Wrong User"}, 404
         return {"msg":"Unauthorized access"}, 401
     except:
