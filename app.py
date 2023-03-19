@@ -153,8 +153,6 @@ def request_equipment():
         cursor.close()
         return f"update status equipment success!!"
 
-mock_equipment_data = [("456135461451","Oscillator"), ("545196164665","Multimeter")]
-
 mock_borrow_data = [("456135461451","s6401012620234", str(date(2023,3,19)), str(date(2023,4,19)), "08spn491324619")]
 def find_account(user, password):
     print(user, password)
@@ -226,6 +224,7 @@ def equipments_lists():
     for eqm in mock_equipment_data:
         count += 1
         eqm_id = eqm[0]
+        print(len(eqm_id))
         sid = ""
         s_dep = ""
         s_year = ""
