@@ -6,14 +6,12 @@ from datetime import datetime, timedelta, timezone
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
 api = Flask(__name__)
 CORS(api)
-#
+
 api.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 api.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(api)
-
 
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
@@ -60,7 +58,7 @@ def login():
             access_token = create_access_token(identity=userinfo)
             return {"access_token":access_token, "role":userinfo["role"]}
     return {"msg":"Wrong user ID or password."}
-#TEST
+
 @api.route('/register', methods=['POST'])
 def register():
     name = request.form['name']
@@ -68,6 +66,9 @@ def register():
     major = request.form['depart']
     year = request.form['year']
     student_id = request.form['sid']
+    if name == None or lastname == None or major == None or year == None \
+        or student_id == None or request.form['password'] == None:
+        return {"msg":"There are some fields that you have left blank."}
     password = generate_password_hash(request.form['password'])
     #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
     if student_id not in mock_users_data and student_id not in mock_admins_data:
