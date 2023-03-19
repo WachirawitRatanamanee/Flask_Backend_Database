@@ -29,28 +29,6 @@ mock_material_data = []
 
 mysql = MySQL(app)
 
-@app.route('/admin_control', methods = ['POST','DELETE'])
-def admin_control():
-    if request.method == 'POST':
-        name = request.form['name']
-        lastName = request.form['lastName']
-        adminId = request.form['adminId']
-        password = hash(request.form['password'])
-        cursor = mysql.connection.cursor()
-        #add admin
-        cursor.execute(''' INSERT INTO jiwjiw(name, lastname) VALUES(%s,%s)''',(adminId,password))
-        mysql.connection.commit()
-        cursor.close()
-        return f"add admin success!!"
-    if request.method == 'DELETE':
-        deleteAdminId = request.form['deleteAdminId']
-        cursor = mysql.connection.cursor()
-        #DELETE addmin
-        cursor.execute(''' DELETE FROM jiwjiw WHERE id = (%s)''',(deleteAdminId))
-        mysql.connection.commit()
-        cursor.close()
-        return f"delete admin success!!"
-
 @app.route('/admin_equipment',methods=['GET','DELETE','PUT','POST'])
 def admin_equipment():
     if request.method == 'GET':
