@@ -1,10 +1,15 @@
 from flask import Flask, jsonify, redirect, url_for, request
 from flask_cors import CORS
-from flask_jwt_extended import  create_access_token, get_jwt, get_jwt_identity ,unset_jwt_cookies, jwt_required, JWTManager
-from datetime import datetime, timedelta, timezone
+from flask_jwt_extended import  create_access_token, get_jwt, get_jwt_identity \
+                                ,unset_jwt_cookies, jwt_required, JWTManager
+from datetime import datetime, timedelta, timezone, date
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os
+import base64
 from flask_mysqldb import MySQL
+
 
 app = Flask(__name__)
 CORS(app)
@@ -13,8 +18,14 @@ app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
 
+image_folder = os.path.abspath("static/images")
+
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
+
+
+mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
+mock_material_data = []
 
 mysql = MySQL(app)
 
@@ -144,6 +155,7 @@ def request_equipment():
 
 mock_equipment_data = [("456135461451","Oscillator"), ("545196164665","Multimeter")]
 
+mock_borrow_data = [("456135461451","s6401012620234", str(date(2023,3,19)), str(date(2023,4,19)), "08spn491324619")]
 def find_account(user, password):
     print(user, password)
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
@@ -184,7 +196,7 @@ def login():
             access_token = create_access_token(identity=userinfo)
             return {"access_token":access_token, "role":userinfo["role"]}
     return {"msg":"Wrong user ID or password."}
-#TEST
+
 @app.route('/register', methods=['POST'])
 def register():
     name = request.form['name']
@@ -192,6 +204,9 @@ def register():
     major = request.form['depart']
     year = request.form['year']
     student_id = request.form['sid']
+    if name == "" or lastname == "" or major == "" or year == "" \
+        or student_id == "" or request.form['password'] == "":
+        return {"msg":"There are some fields that you have left blank."}
     password = generate_password_hash(request.form['password'])
     #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
     if student_id not in mock_users_data and student_id not in mock_admins_data:
@@ -203,18 +218,41 @@ def register():
     else:
         return {"msg":"This id is already registered."}
 
-@app.route('/available_equipments', methods=["GET", "POST"])
-def available_equipments():
-    if request.method == "GET":
-        #ดึงข้อมูล equipment ทั้งหมด
-        return jsonify(mock_equipment_data)
-    elif request.method == "POST":
-        try:
-            decoded = get_jwt()
-            if "sub" in decoded:
-                return {}
-        except:
-            return {}
+@app.route('/equipments', methods=["GET"])
+def equipments_lists():
+    response = []
+    count = 0
+    #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
+    for eqm in mock_equipment_data:
+        count += 1
+        eqm_id = eqm[0]
+        sid = ""
+        s_dep = ""
+        s_year = ""
+        for borrow in mock_borrow_data:
+            image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+            with open(image_name, 'rb') as image_file:
+                encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+            if borrow[0] == eqm_id:
+                sid = borrow[1]
+                s_dep = mock_users_data[sid]["major"]
+                s_year = mock_users_data[sid]["year"]
+                break
+
+        response.append(    {   
+                                "id":eqm_id,
+                                "title":eqm[1],
+                                "type":eqm[2],
+                                "category":eqm[3],
+                                "status": eqm[4],
+                                "location": eqm[5],
+                                "department":s_dep,
+                                "year":s_year,
+                                "studentid": sid,
+                                "image": encoded_image
+                            })
+    return jsonify(response)
+
 
 @app.route('/<string:sid>/borrowing', methods=["GET"])
 @jwt_required()
@@ -223,8 +261,25 @@ def borrowed_equipments(sid):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == sid and decoded["sub"]["role"] == "user":
-                #ดึงข้อมูล equipment ทุก equipment ที่ user คนนี้ยืม
-                return {"msg":"correct"}
+                response = []
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                for borrow in mock_borrow_data:
+                    if borrow[1] == sid:
+                        for eqm in mock_equipment_data:
+                            if eqm[0] == borrow[0]:
+                                image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+                                with open(image_name, 'rb') as image_file:
+                                    encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                                response.append( { "id":eqm[0],
+                                                    "title":eqm[1],
+                                                    "type":eqm[2],
+                                                    "category":eqm[3],
+                                                    "status": eqm[4],
+                                                    "location": eqm[5],
+                                                    "img":encoded_image
+                                                    })
+                                break
+                return jsonify(response)
             return {"msg":"Wrong User"}, 404
         return {"msg":"Unauthorized access"}, 401
     except:
