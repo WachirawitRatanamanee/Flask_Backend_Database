@@ -66,8 +66,8 @@ def register():
     major = request.form['depart']
     year = request.form['year']
     student_id = request.form['sid']
-    if name == None or lastname == None or major == None or year == None \
-        or student_id == None or request.form['password'] == None:
+    if name == "" or lastname == "" or major == "" or year == "" \
+        or student_id == "" or request.form['password'] == "":
         return {"msg":"There are some fields that you have left blank."}
     password = generate_password_hash(request.form['password'])
     #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
