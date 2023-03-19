@@ -6,17 +6,17 @@ from datetime import datetime, timedelta, timezone
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
 
-api = Flask(__name__)
-CORS(api)
+app = Flask(__name__)
+CORS(app)
 
-api.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
-api.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
-jwt = JWTManager(api)
+app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+jwt = JWTManager(app)
 
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
 
-mock_equipment_data = [("456135461451","Oscillator"), ("545196164665","Multimeter")]
+mock_equipment_data = [("456135461451","Oscillator","Electronic","Available",), ("545196164665","Multimeter")]
 
 def find_account(user, password):
     print(user, password)
@@ -28,7 +28,7 @@ def find_account(user, password):
         if check_password_hash(mock_admins_data[user]["password"], password):
             return {"user_id":user, "role":"admin"}
 
-@api.after_request
+@app.after_request
 def refresh_expiring_jwts(response):
     try:
         exp_timestamp = get_jwt()["exp"]
@@ -45,7 +45,7 @@ def refresh_expiring_jwts(response):
         # Case where there is not a valid JWT. Just return the original respone
         return response
 
-@api.route('/login', methods=["POST"])
+@app.route('/login', methods=["POST"])
 def login():
     if request.method == "POST" and "sid" in request.form and "password" in request.form:
         user = request.form["sid"]
@@ -59,7 +59,7 @@ def login():
             return {"access_token":access_token, "role":userinfo["role"]}
     return {"msg":"Wrong user ID or password."}
 
-@api.route('/register', methods=['POST'])
+@app.route('/register', methods=['POST'])
 def register():
     name = request.form['name']
     lastname = request.form['surname']
@@ -80,20 +80,12 @@ def register():
     else:
         return {"msg":"This id is already registered."}
 
-@api.route('/available_equipments', methods=["GET", "POST"])
+@app.route('/available_equipments', methods=["GET"])
 def available_equipments():
-    if request.method == "GET":
-        #ดึงข้อมูล equipment ทั้งหมด
-        return jsonify(mock_equipment_data)
-    elif request.method == "POST":
-        try:
-            decoded = get_jwt()
-            if "sub" in decoded:
-                return {}
-        except:
-            return {}
+    #ดึงข้อมูล equipment ทั้งหมด
+    return jsonify(mock_equipment_data)
 
-@api.route('/<string:sid>/borrowing', methods=["GET"])
+@app.route('/<string:sid>/borrowing', methods=["GET"])
 @jwt_required()
 def borrowed_equipments(sid):
     try:
@@ -108,7 +100,7 @@ def borrowed_equipments(sid):
         return {"msg": "Internal server error"}, 500
     
 
-@api.route('/<string:admin_id>/admin_request', methods=["GET", "PUT", "DELETE"])
+@app.route('/<string:admin_id>/admin_request', methods=["GET", "PUT", "DELETE"])
 @jwt_required()
 def requests_page(admin_id):
     if request.method == "GET":
@@ -118,7 +110,7 @@ def requests_page(admin_id):
     elif request.method == "DELETE":
         pass
 
-@api.route('/<string:admin_id>/admin_equipment', methods=["GET", "POST", "DELETE", "PUT"])
+@app.route('/<string:admin_id>/admin_equipment', methods=["GET", "POST", "DELETE", "PUT"])
 @jwt_required()
 def equipment_detail(admin_id):
     if request.method == "GET":
@@ -130,7 +122,7 @@ def equipment_detail(admin_id):
     elif request.method == "DELETE":
         pass
 
-@api.route('/<string:admin_id>/admin_control/add_admin', methods=["POST"])
+@app.route('/<string:admin_id>/admin_control/add_admin', methods=["POST"])
 @jwt_required()
 def edit_admin_member(admin_id):
     try:
@@ -153,7 +145,7 @@ def edit_admin_member(admin_id):
     except:
         return {"msg": "Internal server error"}, 500
 
-@api.route("/<string:admin_id>/admin_control/delete_admin/<string:delete_id>", methods=["DELETE"])
+@app.route("/<string:admin_id>/admin_control/delete_admin/<string:delete_id>", methods=["DELETE"])
 @jwt_required()
 def delete_admin(admin_id, delete_id):
     try:
@@ -170,11 +162,11 @@ def delete_admin(admin_id, delete_id):
     except:
         return {"msg": "Internal server error"}, 500
 
-@api.route("/logout", methods=["POST"])
+@app.route("/logout", methods=["POST"])
 def logout():
     response = jsonify({"msg": "logout successful"})
     unset_jwt_cookies(response)
     return response
 
 if __name__ == "__main__":
-    api.run(host='localhost', debug = True, port=5000)
+    app.run(host='localhost', debug = True, port=5000)
