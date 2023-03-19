@@ -2,7 +2,7 @@ from flask import Flask, jsonify, redirect, url_for, request
 from flask_cors import CORS
 from flask_jwt_extended import  create_access_token, get_jwt, get_jwt_identity \
                                 ,unset_jwt_cookies, jwt_required, JWTManager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -16,8 +16,10 @@ jwt = JWTManager(app)
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
 
-mock_equipment_data = [("456135461451","Oscillator","Electronic","Available",), ("545196164665","Multimeter")]
+mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Available","Robotic lab"), ("545196164665","SUNWA-1962","Multimeter","Measurment","Available","Electrical lab")]
+mock_material_data = []
 
+mock_borrow_data = [("456135461451","s6401012620234", str(date(2023,3,19)), str(date(2023,4,19)), "08spn491324619")]
 def find_account(user, password):
     print(user, password)
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
@@ -80,10 +82,36 @@ def register():
     else:
         return {"msg":"This id is already registered."}
 
-@app.route('/available_equipments', methods=["GET"])
+@app.route('/equipments', methods=["GET"])
 def available_equipments():
-    #ดึงข้อมูล equipment ทั้งหมด
-    return jsonify(mock_equipment_data)
+    response = {}
+    count = 0
+    #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
+    for eqm in mock_equipment_data:
+        count += 1
+        eqm_id = eqm[0]
+        sid = ""
+        s_dep = ""
+        s_year = ""
+        for borrow in mock_borrow_data:
+            if borrow[0] == eqm_id:
+                sid = borrow[1]
+                s_dep = mock_users_data[sid]["major"]
+                s_year = mock_users_data[sid]["year"]
+                break
+        response[str(count)] =  {   
+                                    "id":eqm_id,
+                                    "title":eqm[1],
+                                    "type":eqm[2],
+                                    "category":eqm[3],
+                                    "system": eqm[4],
+                                    "location": eqm[5],
+                                    "department":s_dep,
+                                    "year":s_year,
+                                    "studentid": sid,
+                                    "image": ''
+                                }
+    return jsonify(response)
 
 @app.route('/<string:sid>/borrowing', methods=["GET"])
 @jwt_required()
