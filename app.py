@@ -4,6 +4,7 @@ from flask_jwt_extended import  create_access_token, get_jwt, get_jwt_identity ,
 from datetime import datetime, timedelta, timezone
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mysqldb import MySQL
 
 app = Flask(__name__)
 CORS(app)
@@ -15,6 +16,8 @@ jwt = JWTManager(app)
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
 
+mysql = MySQL(app)
+
 @app.route('/admin_control', methods = ['POST','DELETE'])
 def admin_control():
     if request.method == 'POST':
@@ -23,7 +26,7 @@ def admin_control():
         adminId = request.form['adminId']
         password = hash(request.form['password'])
         cursor = mysql.connection.cursor()
-        #INSERT TO DB just tried, should renovate VVV
+        #add admin
         cursor.execute(''' INSERT INTO jiwjiw(name, lastname) VALUES(%s,%s)''',(adminId,password))
         mysql.connection.commit()
         cursor.close()
@@ -31,16 +34,16 @@ def admin_control():
     if request.method == 'DELETE':
         deleteAdminId = request.form['deleteAdminId']
         cursor = mysql.connection.cursor()
-        #DELETE FROM DB just tried, should renovate VVV
+        #DELETE addmin
         cursor.execute(''' DELETE FROM jiwjiw WHERE id = (%s)''',(deleteAdminId))
         mysql.connection.commit()
         cursor.close()
         return f"delete admin success!!"
 
-@app.route('/admin_equipment',methods=['GET','DELETE'])
+@app.route('/admin_equipment',methods=['GET','DELETE','PUT','POST'])
 def admin_equipment():
     if request.method == 'GET':
-        total_data = 'Just prevent from Error' #Query [equipmentID,Title_eq, Status , img ,sid,department,year,expiredate ]
+        total_data = 'Just prevent from Error' #Get quipment [equipmentID,Title_eq, Status , img ,sid,department,year,expiredate ]
         results = [
                 {
                     "equipmentID": 1,
@@ -62,15 +65,17 @@ def admin_equipment():
         department = request.form['department']
         year = request.form['year']
         cursor = mysql.connection.cursor()
-        #DELETE FROM DB just tried, should renovate VVV
+        #DELETE equipment 
         cursor.execute(''' DELETE FROM jiwjiw WHERE id = (%s)''',(equipmentID))
         mysql.connection.commit()
         cursor.close()
         return f"delete equipment success!!"
-    if request.method == 'PUT': 
+    if request.method == 'PUT':  
         EQ_Title = request.form['EQ_Title']
         EQ_ID = request.form['EQ_ID']
-        Img = request.form['Img']
+        Status = request.form['Status']
+        Borrow_date = request.form['Borrow_date']
+        Return_date = request.form['Return_date']
         cursor = mysql.connection.cursor()
         #edit equipment VVV
         cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
@@ -80,9 +85,7 @@ def admin_equipment():
     if request.method == 'POST':
         EQ_Title = request.form['EQ_Title']
         EQ_ID = request.form['EQ_ID']
-        Status = request.form['Status']
-        Borrow_date = request.form['Borrow_date']
-        Return_date = request.form['Return_date']
+        Img = request.form['Img']
         cursor = mysql.connection.cursor()
         #INSERT EQUIPMENT
         cursor.execute(''' INSERT INTO jiwjiw ''')
@@ -93,7 +96,7 @@ def admin_equipment():
 @app.route('/admin-request',methods=['GET','PUT','POST','DELETE'])
 def request_equipment():
     if request.method == 'GET':
-        total_data = 'Just prevent from Error' #Query [ID,Title ,std_id,EQID , img,expiredate ]
+        total_data = 'Just prevent from Error' #Get equipment that student's request [ID,Title ,std_id,EQID , img,expiredate ]
         results = [
                 {
                     "ID": 1,
@@ -111,7 +114,7 @@ def request_equipment():
         img = request.form['img']
         expiredate = request.form['expiredate']
         cursor = mysql.connection.cursor()
-        #UPDATE to borrowed from available VVV
+        #UPDATE euipment  ??????
         cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(ID))
         mysql.connection.commit()
         cursor.close()
@@ -121,7 +124,7 @@ def request_equipment():
         Tittle_EQ = request.form['Tittle_EQ']
         Status = request.form['Status']
         cursor = mysql.connection.cursor()
-        #UPDATE status to notav VVV
+        #INSERT status == notav VVV
         cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
         mysql.connection.commit()
         cursor.close()
@@ -133,7 +136,7 @@ def request_equipment():
         Expireddate = request.form['Expireddate']
         Returndate = request.form['Returndate']
         cursor = mysql.connection.cursor()
-        #UPDATE status to av VVV
+        #DELETE status == av VVV
         cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
         mysql.connection.commit()
         cursor.close()
