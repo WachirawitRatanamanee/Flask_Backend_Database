@@ -282,46 +282,46 @@ def admin_eqm_detail(admin_id):
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 response = []
-        count = 0
-        #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
-        for eqm in mock_equipment_data:
-            count += 1
-            eqm_id = eqm[0]
-            print(len(eqm_id))
-            sid = ""
-            s_dep = ""
-            s_year = ""
-            borrow_date = ""
-            return_date = ""
-            for borrow in mock_borrow_data:
-                #รูป
-                image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
-                with open(image_name, 'rb') as image_file:
-                    encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                #-------------------------------------------------------------------------
-                if borrow[0] == eqm_id:
-                    sid = borrow[1]
-                    s_dep = mock_users_data[sid]["major"]
-                    s_year = mock_users_data[sid]["year"]
-                    borrow_date = borrow[2]
-                    return_date = borrow[3]
-                    break
+                count = 0
+                #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
+                for eqm in mock_equipment_data:
+                    count += 1
+                    eqm_id = eqm[0]
+                    print(len(eqm_id))
+                    sid = ""
+                    s_dep = ""
+                    s_year = ""
+                    borrow_date = ""
+                    return_date = ""
+                    for borrow in mock_borrow_data:
+                        #รูป
+                        image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+                        with open(image_name, 'rb') as image_file:
+                            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                        #-------------------------------------------------------------------------
+                        if borrow[0] == eqm_id:
+                            sid = borrow[1]
+                            s_dep = mock_users_data[sid]["major"]
+                            s_year = mock_users_data[sid]["year"]
+                            borrow_date = borrow[2]
+                            return_date = borrow[3]
+                            break
 
-            response.append(    {   
-                                    "id":eqm_id,
-                                    "title":eqm[1],
-                                    "type":eqm[2],
-                                    "category":eqm[3],
-                                    "status": eqm[4],
-                                    "location": eqm[5],
-                                    "department":s_dep,
-                                    "year":s_year,
-                                    "studentid": sid,
-                                    "image": encoded_image,
-                                    "borrow_date":borrow_date,
-                                    "expiredate":return_date
-                                })
-        return jsonify(response)
+                    response.append(    {   
+                                            "id":eqm_id,
+                                            "title":eqm[1],
+                                            "type":eqm[2],
+                                            "category":eqm[3],
+                                            "status": eqm[4],
+                                            "location": eqm[5],
+                                            "department":s_dep,
+                                            "year":s_year,
+                                            "studentid": sid,
+                                            "image": encoded_image,
+                                            "borrow_date":borrow_date,
+                                            "expiredate":return_date
+                                        })
+                return jsonify(response)
 
     except:
         return {"msg": "Internal server error"}, 500
