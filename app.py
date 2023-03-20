@@ -27,13 +27,13 @@ mysql = MySQL(app)
 
 image_folder = os.path.abspath("static/images")
 
-mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
+mock_users_data = {"5":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
 mock_equipment_data = [
     ("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), 
     ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
 mock_material_data = []
-mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
+mock_borrow_data = [("456135461451","5", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
 
 def find_account(user, password):
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
@@ -41,7 +41,6 @@ def find_account(user, password):
     cursor.execute('''SELECT * FROM user WHERE s_id=(%s) ''',(user,))
     data = cursor.fetchall()
     account= {}
-    # print(generate_password_hash(password) == generate_password_hash(password) )
     if data and check_password_hash(data[0][2],password) :
         account = {
             "sid" :data[0][1],
@@ -88,10 +87,11 @@ def register():
     major = request.form['depart']
     year = request.form['year']
     student_id = request.form['sid']
+    req_password = request.form['password']
     if name == "" or lastname == "" or major == "" or year == "" \
-        or student_id == "" or request.form['password'] == "":
+        or student_id == "" or req_password == "":
         return {"msg":"There are some fields that you have left blank."}
-    password = generate_password_hash(request.form['password'])
+    password = generate_password_hash(req_password)
     #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
     cursor = mysql.connection.cursor()
     cursor.execute('''SELECT s_id FROM user ''')
@@ -119,19 +119,9 @@ def equipments_lists():
     for eqm in data:
         count += 1
         eqm_id = eqm[3]
-        # print(len(eqm_id))
-        sid = ""
-        s_dep = ""
-        s_year = ""
-        image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6]))
+        image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
         with open(image_name, 'rb') as image_file:
             encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-        for borrow in mock_borrow_data:
-            if borrow[0] == eqm_id:
-                sid = borrow[1]
-                s_dep = mock_users_data[sid]["major"]
-                s_year = mock_users_data[sid]["year"]
-                break
         response.append(    {   
                                 "id":eqm_id,
                                 "title":eqm[2],
@@ -142,7 +132,7 @@ def equipments_lists():
                                 "department":eqm[18] if eqm[18] else "-",
                                 "year": eqm[19] if eqm[19] else "-" ,
                                 "studentid": eqm[14] if eqm[14] else "-",
-                                # "image": encoded_image
+                                "image": encoded_image
                             })
     return jsonify(response)
 
@@ -159,18 +149,17 @@ def borrowed_equipments(sid):
                     if borrow[1] == sid:
                         for eqm in mock_equipment_data:
                             if eqm[0] == borrow[0]:
-                                image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6]))
+                                image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
                                 with open(image_name, 'rb') as image_file:
-                                    encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                                     encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
                                 response.append( { "id":eqm[0],
                                                     "title":eqm[1],
                                                     "type":eqm[2],
                                                     "category":eqm[3],
                                                     "status": eqm[4],
                                                     "location": eqm[5],
-                                                    # "img":encoded_image
+                                                    "image": encoded_image
                                                     })
-                                break
                 return jsonify(response)
             return {"msg":"Wrong User"}, 404
         return {"msg":"Unauthorized access"}, 401
@@ -189,24 +178,16 @@ def admin_eqm_detail(admin_id):
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
                     for eqm in mock_equipment_data:
                         eqm_id = eqm[0]
-                        sid = ""
-                        s_dep = ""
-                        s_year = ""
-                        borrow_date = ""
-                        return_date = ""
                         for borrow in mock_borrow_data:
-                            #รูป
-                            image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+                            image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
                             with open(image_name, 'rb') as image_file:
                                 encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                            #-------------------------------------------------------------------------
                             if borrow[0] == eqm_id:
                                 sid = borrow[1]
                                 s_dep = mock_users_data[sid]["major"]
                                 s_year = mock_users_data[sid]["year"]
                                 borrow_date = borrow[2]
                                 return_date = borrow[3]
-                                break
                         response.append(    {   
                                                 "id":eqm_id,
                                                 "title":eqm[1],
