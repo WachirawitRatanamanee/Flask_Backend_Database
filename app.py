@@ -10,38 +10,44 @@ import os
 import base64
 from flask_mysqldb import MySQL
 
-
 app = Flask(__name__)
 CORS(app)
 
 app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
-
-mysql = MySQL(app)
-    
+ 
 #Frontend API connection tests begin here
+
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = ''
+app.config['MYSQL_DB'] = 'lab_eq'
+mysql = MySQL(app)
 
 image_folder = os.path.abspath("static/images")
 
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
-mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
-
-
-mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
+mock_equipment_data = [
+    ("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), 
+    ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
 mock_material_data = []
-
 mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
 
 def find_account(user, password):
-    print(user, password)
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
-    if user in mock_users_data:
-        if check_password_hash(mock_users_data[user]["password"], password):
-            return {"user_id":user, "role":"user"}
-    elif user in mock_admins_data:
-        if check_password_hash(mock_admins_data[user]["password"], password):
-            return {"user_id":user, "role":"admin"}
+    cursor = mysql.connection.cursor()
+    cursor.execute('''SELECT * FROM user WHERE s_id=(%s) ''',(user,))
+    data = cursor.fetchall()
+    account= {}
+    # print(generate_password_hash(password) == generate_password_hash(password) )
+    if data and check_password_hash(data[0][2],password) :
+        account = {
+            "sid" :data[0][1],
+            "role" : "student" if data[0][-1] else "admin"
+            }
+    cursor.close()
+    return account
 
 @app.after_request
 def refresh_expiring_jwts(response):
@@ -86,24 +92,33 @@ def register():
         return {"msg":"There are some fields that you have left blank."}
     password = generate_password_hash(request.form['password'])
     #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
-    if student_id not in mock_users_data and student_id not in mock_admins_data:
+    cursor = mysql.connection.cursor()
+    cursor.execute('''SELECT s_id FROM user ''')
+    data = cursor.fetchall()
+    u_id = [ temp[0] for temp in data ]
+    if student_id not in u_id :
         #เพิ่ม user คนใหม่
-        mock_users_data[student_id] = {"name":name,"lastname":lastname,"major":major,"year":year,"password":password}
+        cursor.execute('''INSERT INTO user(s_id,password,f_name,s_name,major,year,role) VALUES(%s,%s,%s,%s,%s,%s,'1')''',(student_id,password,name,lastname,major,year))
+        mysql.connection.commit()
         userinfo = {"sid":student_id, "role":"user"}
         access_token = create_access_token(identity=userinfo)
         return {"access_token":access_token, "role":"user", "id":userinfo["sid"]}
     else:
+        cursor.close()
         return {"msg":"This id is already registered."}
 
 @app.route('/equipments', methods=["GET"])
 def equipments_lists():
     response = []
-    count = 0
+    count = 0 
+    cursor = mysql.connection.cursor()
+    cursor.execute('''SELECT * FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
+    data = cursor.fetchall()
     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
-    for eqm in mock_equipment_data:
+    for eqm in data:
         count += 1
-        eqm_id = eqm[0]
-        print(len(eqm_id))
+        eqm_id = eqm[3]
+        # print(len(eqm_id))
         sid = ""
         s_dep = ""
         s_year = ""
@@ -116,18 +131,17 @@ def equipments_lists():
                 s_dep = mock_users_data[sid]["major"]
                 s_year = mock_users_data[sid]["year"]
                 break
-
         response.append(    {   
                                 "id":eqm_id,
-                                "title":eqm[1],
-                                "type":eqm[2],
-                                "category":eqm[3],
-                                "status": eqm[4],
+                                "title":eqm[2],
+                                "type":eqm[1],
+                                "category":eqm[4],
+                                "status": eqm[6],
                                 "location": eqm[5],
-                                "department":s_dep,
-                                "year":s_year,
-                                "studentid": sid,
-                                "image": encoded_image
+                                "department":eqm[18] if eqm[18] else "-",
+                                "year": eqm[19] if eqm[19] else "-" ,
+                                "studentid": eqm[14] if eqm[14] else "-",
+                                # "image": encoded_image
                             })
     return jsonify(response)
 
@@ -192,7 +206,6 @@ def admin_eqm_detail(admin_id):
                                 borrow_date = borrow[2]
                                 return_date = borrow[3]
                                 break
-
                         response.append(    {   
                                                 "id":eqm_id,
                                                 "title":eqm[1],
@@ -208,7 +221,6 @@ def admin_eqm_detail(admin_id):
                                                 "expiredate":return_date
                                             })
                     return jsonify(response)
-                
                 if request.method == "PUT":
                     #ช่างหัวมันเรื่องรูป
                     title = request.form["title"]
@@ -217,7 +229,6 @@ def admin_eqm_detail(admin_id):
                     eqm_type = request.form["type"]
                     category = request.form["category"]
                     location = request.form["location"]
-
                     if status == "Available":
                         #ดึงข้อมูล eqm มา-------------------------------------------
                         for num in range(len(mock_equipment_data)):
@@ -233,20 +244,16 @@ def admin_eqm_detail(admin_id):
 
                                 #อัปเดทรายละเอียด equipment
                                 mock_equipment_data[num] = (eqm_id, title, category, eqm_type, status, location, "placeholder.png")
-
                                 return {"msg":"Updated successfully"}
                             return {"msg":"The equipment doesn't exists"}
-
                     elif status == "Unavailable":
                         student_id = request.form["sid"]
                         student_name = request.form["name"]
                         borrow_date = request.form["Borrow_date"]
                         return_date = request.form["Return_date"]
-
                         #ดึง Student_id นี้จาก Database ถ้ามีทำงานต่อ ถ้าไม่มี return message
                         if student_id not in mock_users_data:
                             return {"msg":"This user doesn't exist."}
-
                         #ดึงข้อมูล eqm มา-------------------------------------------
                         for num in range(len(mock_equipment_data)):
                             if mock_equipment_data[num][0] == eqm_id:
@@ -254,21 +261,17 @@ def admin_eqm_detail(admin_id):
                                 if mock_equipment_data[num][4] == "Available":
                                     #เพิ่มข้อมูลการยืม (E_ID, S_ID, borrow_date, return_date, A_ID)
                                     mock_borrow_data.append((mock_equipment_data[num][0], student_id, borrow_date, return_date, admin_id))
-                                
                                 elif mock_equipment_data[num][4] == "Unavailable":
                                     #เปลี่ยนรายละเอียดการยืม
                                     for i in range(len(mock_borrow_data)):
                                         if mock_borrow_data[i][0] == mock_equipment_data[num][0]:
                                             mock_borrow_data[i] = (mock_equipment_data[num][0], student_id, borrow_date, return_date, admin_id)
-                                
                                 #อัปเดทรายละเอียด equipment
                                 mock_equipment_data[num] = (eqm_id, title, category, eqm_type, status, location, "placeholder.png")
                                 return {"msg":"Update successfully"}
                             return {"msg":"The equipment doesn't exists"}
-
                 if request.method == "POST":
                     pass #รอโค้ดน้องบิว
-
     except:
         return {"msg": "Internal server error"}, 500
 
@@ -302,7 +305,6 @@ def delete_equipment(admin_id, eqm_id):
             return {"msg": "Unauthorized access"} , 401
     except:
         return {"msg": "Internal server error"}, 500
-                        
 
 @app.route('/<string:admin_id>/admin_control/add_admin', methods=["POST"])
 @jwt_required()
@@ -320,7 +322,6 @@ def add_admin_member(admin_id):
                 if newadmin_id not in mock_admins_data and newadmin_id not in mock_users_data:
                     #เพิ่ม admin คนใหม่
                     mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"depart":depart,"password":password}
-
                     #ลงทะเบียนสำเร็จ
                     return {"msg":f"Admin {newadmin_id} is added successfully"}
                 #ลงทะเบียนไปแล้ว
