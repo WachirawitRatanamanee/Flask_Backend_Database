@@ -144,22 +144,24 @@ def borrowed_equipments(sid):
         if "sub" in decoded:
             if decoded["sub"]["sid"] == sid and decoded["sub"]["role"] == "user":
                 response = []
+                cursor = mysql.connection.cursor()
+                cursor.execute('''SELECT equipment.eq_id,equipment.eq_name,equipment.eq_type,equipment.category,equipment.location,equipment.status 
+                                    FROM eq_borrow INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
+                                    WHERE eq_borrow.s_id = (%s) ''',(sid,))
+                data = cursor.fetchall()
                 #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
-                for borrow in mock_borrow_data:
-                    if borrow[1] == sid:
-                        for eqm in mock_equipment_data:
-                            if eqm[0] == borrow[0]:
-                                image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-                                with open(image_name, 'rb') as image_file:
-                                     encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                                response.append( { "id":eqm[0],
-                                                    "title":eqm[1],
-                                                    "type":eqm[2],
-                                                    "category":eqm[3],
-                                                    "status": eqm[4],
-                                                    "location": eqm[5],
-                                                    "image": encoded_image
-                                                    })
+                for borrow in data:
+                    image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
+                    with open(image_name, 'rb') as image_file:
+                            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                    response.append( { "id":borrow[0],
+                                        "title":borrow[1],
+                                        "type":borrow[2],
+                                        "category":borrow[3],
+                                        "status": borrow[4],
+                                        "location": borrow[5],
+                                        "image": encoded_image
+                                        })
                 return jsonify(response)
             return {"msg":"Wrong User"}, 404
         return {"msg":"Unauthorized access"}, 401
