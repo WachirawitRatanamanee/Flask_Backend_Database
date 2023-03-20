@@ -18,17 +18,6 @@ app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
 
-image_folder = os.path.abspath("static/images")
-
-mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
-mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
-
-
-mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
-mock_material_data = []
-
-mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
-
 mysql = MySQL(app)
 
 @app.route('/admin_equipment',methods=['GET','DELETE','PUT','POST'])
@@ -83,6 +72,19 @@ def admin_equipment():
         mysql.connection.commit()
         cursor.close()
         return f"update status equipment success!!"
+    
+#Frontend API connection tests begin here
+
+image_folder = os.path.abspath("static/images")
+
+mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
+mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
+
+
+mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
+mock_material_data = []
+
+mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
     
 @app.route('/admin-request',methods=['GET','PUT','POST','DELETE'])
 def request_equipment():
@@ -317,7 +319,7 @@ def admin_eqm_detail(admin_id):
                                     "studentid": sid,
                                     "image": encoded_image,
                                     "borrow_date":borrow_date,
-                                    "return_date":return_date
+                                    "expiredate":return_date
                                 })
         return jsonify(response)
 
