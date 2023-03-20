@@ -171,42 +171,46 @@ def borrowed_equipments(sid):
 @app.route("/<string:admin_id>/admin_equipment", methods=["GET", "PUT", "POST"])
 @jwt_required()
 def admin_eqm_detail(admin_id):
+    print("ad eq")
     try:
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 if request.method == "GET":
+                    print("GET")
                     response = []
+                    cursor = mysql.connection.cursor()
+                    cursor.execute('''SELECT equipment.eq_id,equipment.eq_name,equipment.eq_type,equipment.category,equipment.status,
+                    equipment.location,user.major,user.year,user.s_id
+                    FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
+                    LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
+                    data = cursor.fetchall()
+                    print(data)
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
-                    for eqm in mock_equipment_data:
-                        eqm_id = eqm[0]
-                        for borrow in mock_borrow_data:
-                            image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-                            with open(image_name, 'rb') as image_file:
-                                encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                            if borrow[0] == eqm_id:
-                                sid = borrow[1]
-                                s_dep = mock_users_data[sid]["major"]
-                                s_year = mock_users_data[sid]["year"]
-                                borrow_date = borrow[2]
-                                return_date = borrow[3]
-                        response.append(    {   
-                                                "id":eqm_id,
-                                                "title":eqm[1],
-                                                "type":eqm[2],
-                                                "category":eqm[3],
-                                                "status": eqm[4],
-                                                "location": eqm[5],
-                                                "department":s_dep,
-                                                "year":s_year,
-                                                "studentid": sid,
-                                                "image": encoded_image,
-                                                "borrow_date":borrow_date,
-                                                "expiredate":return_date
-                                            })
+                    for eqm in data:
+                        print("eqm = ",eqm)
+                        image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
+                        with open(image_name, 'rb') as image_file:
+                            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                        response.append({   
+                                            "id":eqm[0],
+                                            "title":eqm[1],
+                                            "type":eqm[2],
+                                            "category":eqm[3],
+                                            "status": eqm[4],
+                                            "location": eqm[5],
+                                            "department":eqm[6],
+                                            "year":eqm[7],
+                                            "studentid": eqm[8],
+                                            "image": encoded_image,
+                                            "borrow_date":"borrow_date",
+                                            "expiredate":"return_date"
+                                        })
                     return jsonify(response)
+                
                 if request.method == "PUT":
                     #ช่างหัวมันเรื่องรูป
+                    print("PUT")
                     title = request.form["title"]
                     eqm_id = request.form["id"]
                     status = request.form["status"]
@@ -256,6 +260,7 @@ def admin_eqm_detail(admin_id):
                             return {"msg":"The equipment doesn't exists"}
 
                 if request.method == "POST":
+                    print("POST")
                     title = request.form['title']
                     eqm_id = request.form['eqm_id']
                     eqm_type = request.form['eqm_type']
@@ -266,8 +271,8 @@ def admin_eqm_detail(admin_id):
                     for num in range(len(mock_equipment_data)):
                         if mock_equipment_data[num][0] == eqm_id:
                             return {"msg":"This equipment already exists."}
-                    #เพิ่มเข้ารายงานให้ยืมได้ โดย status เป็น Available
-                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "Available", location, "placeholder.png"))
+ 
+                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
                     return {"msg":"This equipment added successfully."}
     except:
         return {"msg": "Internal server error"}, 500
