@@ -264,8 +264,8 @@ def admin_eqm_detail(admin_id):
                     for num in range(len(mock_equipment_data)):
                         if mock_equipment_data[num][0] == eqm_id:
                             return {"msg":"This equipment already exists."}
- 
-                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
+                    #เพิ่มเข้ารายงานให้ยืมได้ โดย status เป็น Available
+                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "Available", location, "placeholder.png"))
                     return {"msg":"This equipment added successfully."}
     except:
         return {"msg": "Internal server error"}, 500
@@ -277,13 +277,12 @@ def delete_equipment(admin_id, eqm_id):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
-                #ลบการยืม eqm นี้ออกจาก database
+                #ลบ borrow eqm นี้ออกจาก database
                 #ลบ eqm นี้ออกจาก database
                 target_eqm = None
                 for num in range(len(mock_equipment_data)):
                     if mock_equipment_data[num][0] == eqm_id:
                         target_eqm = mock_equipment_data[num]
-                        break
                 if target_eqm:
                     copy_borrow_data = mock_borrow_data.copy()  
                     for borrow in copy_borrow_data:
@@ -292,7 +291,7 @@ def delete_equipment(admin_id, eqm_id):
                     del copy_borrow_data
                     mock_equipment_data.remove(target_eqm)
                 #----------------------------------------------------------------------------
-                    #เจอ eqm นั้น
+                    #ลบเสร็จสิ้น
                     return {"msg":f"Equipment of id {eqm_id} is deleted successfully."}
                 else:
                     #ไม่เจอ eqm นั้น
@@ -319,7 +318,7 @@ def add_admin_member(admin_id):
                     mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"depart":depart,"password":password}
                     #ลงทะเบียนสำเร็จ
                     return {"msg":f"Admin {newadmin_id} is added successfully"}
-                #ลงทะเบียนไปแล้ว
+                #แอดมินคนนั้นลงทะเบียนไปแล้ว
                 return {"msg":"Already registered"}
             return {"msg": "Unauthorized access"} , 401
     except:
@@ -335,7 +334,9 @@ def delete_admin(admin_id, delete_id):
                 #ลบ Admin ที่มี id ตรงกับ delete_id
                 if delete_id in mock_admins_data:
                     del mock_admins_data[delete_id]
+                    #เจอแอดมินคนนั้นและลบสำเร็จ
                     return {"msg":f"Deletion of admin {delete_id} is successful."}
+                #ไม่#เจอแอดมินคนนั้นและลบไม้สำเร็จ
                 return {"msg":f"No admin {delete_id} exists."}
             return {"msg":"Unauthorized address"}, 403
         return {"msg":"Unauthorized address"}, 403
