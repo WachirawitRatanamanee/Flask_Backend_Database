@@ -27,6 +27,8 @@ mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"
 mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
 mock_material_data = []
 
+mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
+
 mysql = MySQL(app)
 
 @app.route('/admin_equipment',methods=['GET','DELETE','PUT','POST'])
@@ -131,7 +133,6 @@ def request_equipment():
         cursor.close()
         return f"update status equipment success!!"
 
-mock_borrow_data = [("456135461451","s6401012620234", str(date(2023,3,19)), str(date(2023,4,19)), "08spn491324619")]
 def find_account(user, password):
     print(user, password)
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
@@ -230,7 +231,6 @@ def equipments_lists():
                             })
     return jsonify(response)
 
-
 @app.route('/<string:sid>/borrowing', methods=["GET"])
 @jwt_required()
 def borrowed_equipments(sid):
@@ -261,19 +261,8 @@ def borrowed_equipments(sid):
         return {"msg":"Unauthorized access"}, 401
     except:
         return {"msg": "Internal server error"}, 500
-    
 
-@app.route('/<string:admin_id>/admin_request', methods=["GET", "PUT", "DELETE"])
-@jwt_required()
-def requests_page(admin_id):
-    if request.method == "GET":
-        pass
-    elif request.method == "PUT":
-        pass
-    elif request.method == "DELETE":
-        pass
-
-@app.route('/<string:admin_id>/admin_equipment', methods=["GET", "POST", "DELETE", "PUT"])
+"""@app.route('/<string:admin_id>/admin_equipment', methods=["GET", "POST", "PUT"])
 @jwt_required()
 def equipment_detail(admin_id):
     if request.method == "GET":
@@ -281,28 +270,112 @@ def equipment_detail(admin_id):
     elif request.method == "POST":
         pass
     elif request.method == "PUT":
-        pass
-    elif request.method == "DELETE":
-        pass
+        pass"""
+
+@app.route("/<string:admin_id>/admin_equipment", methods=["GET"])
+@jwt_required()
+def admin_eqm_detail(admin_id):
+    try:
+        decoded = get_jwt()
+        if "sub" in decoded:
+            if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
+                response = []
+        count = 0
+        #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
+        for eqm in mock_equipment_data:
+            count += 1
+            eqm_id = eqm[0]
+            print(len(eqm_id))
+            sid = ""
+            s_dep = ""
+            s_year = ""
+            borrow_date = ""
+            return_date = ""
+            for borrow in mock_borrow_data:
+                #รูป
+                image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+                with open(image_name, 'rb') as image_file:
+                    encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                #-------------------------------------------------------------------------
+                if borrow[0] == eqm_id:
+                    sid = borrow[1]
+                    s_dep = mock_users_data[sid]["major"]
+                    s_year = mock_users_data[sid]["year"]
+                    borrow_date = borrow[2]
+                    return_date = borrow[3]
+                    break
+
+            response.append(    {   
+                                    "id":eqm_id,
+                                    "title":eqm[1],
+                                    "type":eqm[2],
+                                    "category":eqm[3],
+                                    "status": eqm[4],
+                                    "location": eqm[5],
+                                    "department":s_dep,
+                                    "year":s_year,
+                                    "studentid": sid,
+                                    "image": encoded_image,
+                                    "borrow_date":borrow_date,
+                                    "return_date":return_date
+                                })
+        return jsonify(response)
+
+    except:
+        return {"msg": "Internal server error"}, 500
+
+@app.route("/<string:admin_id>/admin_equipment/delete/<string:eqm_id>", methods=["DELETE"])
+@jwt_required()
+def delete_equipment(admin_id, eqm_id):
+    try:
+        decoded = get_jwt()
+        if "sub" in decoded:
+            if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
+                #ลบการยืม eqm นี้ออกจาก database
+                #ลบ eqm นี้ออกจาก database
+                target_eqm = None
+                for eqm in mock_equipment_data:
+                    if eqm[0] == eqm_id:
+                        target_eqm = eqm
+                        break
+                if target_eqm:
+                    copy_borrow_data = mock_borrow_data.copy()  
+                    for borrow in copy_borrow_data:
+                        if borrow[0] == target_eqm[0]:
+                            mock_borrow_data.remove(borrow)
+                    del copy_borrow_data
+                    mock_equipment_data.remove(target_eqm)
+                #----------------------------------------------------------------------------
+                    #เจอ eqm นั้น
+                    return {"msg":f"Equipment of id {eqm_id} is deleted successfully."}
+                else:
+                    #ไม่เจอ eqm นั้น
+                    return {"msg":f"Equipment of id {eqm_id} doesn't exists."}
+            return {"msg": "Unauthorized access"} , 401
+    except:
+        return {"msg": "Internal server error"}, 500
+                        
 
 @app.route('/<string:admin_id>/admin_control/add_admin', methods=["POST"])
 @jwt_required()
-def edit_admin_member(admin_id):
+def add_admin_member(admin_id):
     try:
         decoded = get_jwt()
-        name = request.form['name']
-        lastname = request.form['surname']
-        depart = request.form['depart']
-        newadmin_id = request.form['sid']
-        password = generate_password_hash(request.form['password'])
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
+                name = request.form['name']
+                lastname = request.form['surname']
+                depart = request.form['depart']
+                newadmin_id = request.form['sid']
+                password = generate_password_hash(request.form['password'])
                 #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
                 if newadmin_id not in mock_admins_data and newadmin_id not in mock_users_data:
                     #เพิ่ม admin คนใหม่
                     mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"depart":depart,"password":password}
-                    admininfo = {"sid":newadmin_id, "role":"admin"}
-                    return {"msg":"add successful"}
+
+                    #ลงทะเบียนสำเร็จ
+                    return {"msg":f"Admin {newadmin_id} is added successfully"}
+                #ลงทะเบียนไปแล้ว
                 return {"msg":"Already registered"}
             return {"msg": "Unauthorized access"} , 401
     except:
