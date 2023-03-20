@@ -271,7 +271,7 @@ def admin_eqm_detail(admin_id):
                                 mock_equipment_data[num] = (eqm_id, title, category, eqm_type, status, location, "placeholder.png")
                                 return {"msg":"Update successfully"}
                             return {"msg":"The equipment doesn't exists"}
-                            
+
                 if request.method == "POST":
                     title = request.form['title']
                     eqm_id = request.form['eqm_id']
@@ -283,10 +283,9 @@ def admin_eqm_detail(admin_id):
                     for num in range(len(mock_equipment_data)):
                         if mock_equipment_data[num][0] == eqm_id:
                             return {"msg":"This equipment already exists."}
-
-                    if eqm_id is not None :  
-                        mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
-                        return {"msg":"This equipment added successfully."}
+ 
+                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
+                    return {"msg":"This equipment added successfully."}
     except:
         return {"msg": "Internal server error"}, 500
 

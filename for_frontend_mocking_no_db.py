@@ -277,9 +277,9 @@ def admin_eqm_detail(admin_id):
                         if mock_equipment_data[num][0] == eqm_id:
                             return {"msg":"This equipment already exists."}
 
-                    if eqm_id is not None :  
-                        mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
-                        return {"msg":"This equipment added successfully."}
+
+                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
+                    return {"msg":"This equipment added successfully."}
 
     except:
         return {"msg": "Internal server error"}, 500
