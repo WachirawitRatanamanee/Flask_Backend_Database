@@ -10,13 +10,14 @@ import os
 import base64
 from flask_mysqldb import MySQL
 
-
 app = Flask(__name__)
 CORS(app)
 
 app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
+ 
+#Frontend API connection tests begin here
 
 app.config['MYSQL_HOST'] = 'localhost'
 app.config['MYSQL_USER'] = 'root'
@@ -24,150 +25,16 @@ app.config['MYSQL_PASSWORD'] = ''
 app.config['MYSQL_DB'] = 'lab_eq'
 mysql = MySQL(app)
 
-
 image_folder = os.path.abspath("static/images")
 
 mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
-
 mock_equipment_data = [
     ("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), 
     ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
 mock_material_data = []
-
-
-@app.route('/admin_control', methods = ['POST','DELETE'])
-def admin_control():
-    if request.method == 'POST':
-        name = request.form['name']
-        lastName = request.form['lastName']
-        adminId = request.form['adminId']
-        password = hash(request.form['password'])
-        cursor = mysql.connection.cursor()
-        #add admin
-        cursor.execute(''' INSERT INTO jiwjiw(name, lastname) VALUES(%s,%s)''',(adminId,password))
-        mysql.connection.commit()
-        cursor.close()
-        return f"add admin success!!"
-    if request.method == 'DELETE':
-        deleteAdminId = request.form['deleteAdminId']
-        cursor = mysql.connection.cursor()
-        #DELETE addmin
-        cursor.execute(''' DELETE FROM jiwjiw WHERE id = (%s)''',(deleteAdminId))
-        mysql.connection.commit()
-        cursor.close()
-        return f"delete admin success!!"
-
-@app.route('/admin_equipment',methods=['GET','DELETE','PUT','POST'])
-def admin_equipment():
-    print("hi")
-    if request.method == 'GET':
-        cursor = mysql.connection.cursor()
-        cursor.execute('''SELECT * FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
-        total_data = cursor.fetchall()
-        print(total_data)
-        results = [
-                {
-                    "equipmentID": each_data,
-                    "Title_eq": each_data,
-                    "Status": each_data,
-                    # "img": 1,
-                    "sid": each_data,
-                    "department": 1,
-                    "year": 1,
-                    "expiredate": 1,
-                } for each_data in total_data]
-        return {"data": results}
-    if request.method == 'DELETE':
-        equipmentID = request.form['equipmentID']
-        Title_eq = request.form['Title_eq']
-        Status = request.form['Status']
-        img = request.form['img']
-        sid = request.form['sid']
-        department = request.form['department']
-        year = request.form['year']
-        cursor = mysql.connection.cursor()
-        #DELETE equipment 
-        cursor.execute(''' DELETE FROM jiwjiw WHERE id = (%s)''',(equipmentID))
-        mysql.connection.commit()
-        cursor.close()
-        return f"delete equipment success!!"
-    if request.method == 'PUT':  
-        EQ_Title = request.form['EQ_Title']
-        EQ_ID = request.form['EQ_ID']
-        Status = request.form['Status']
-        Borrow_date = request.form['Borrow_date']
-        Return_date = request.form['Return_date']
-        cursor = mysql.connection.cursor()
-        #edit equipment VVV
-        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
-        mysql.connection.commit()
-        cursor.close()
-        return f"update status equipment success!!"
-    if request.method == 'POST':
-        EQ_Title = request.form['EQ_Title']
-        EQ_ID = request.form['EQ_ID']
-        Img = request.form['Img']
-        cursor = mysql.connection.cursor()
-        #INSERT EQUIPMENT
-        cursor.execute(''' INSERT INTO jiwjiw ''')
-        mysql.connection.commit()
-        cursor.close()
-        return f"update status equipment success!!"
-    
-@app.route('/admin-request',methods=['GET','PUT','POST','DELETE'])
-def request_equipment():
-    if request.method == 'GET':
-        total_data = 'Just prevent from Error' #Get equipment that student's request [ID,Title ,std_id,EQID , img,expiredate ]
-        results = [
-                {
-                    "ID": 1,
-                    "Title": 1,
-                    "std_id": 1,
-                    "EQID": 1,
-                    "img": 1,
-                    "expiredate": 1,
-                } for each_data in total_data]
-        return {"data": results}
-    if request.method == 'PUT':
-        ID = request.form['ID']
-        Title = request.form['Title']
-        std_idEQ = request.form['std_idEQ']
-        img = request.form['img']
-        expiredate = request.form['expiredate']
-        cursor = mysql.connection.cursor()
-        #UPDATE euipment  ??????
-        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(ID))
-        mysql.connection.commit()
-        cursor.close()
-        return f"update status equipment success!!"
-    if request.method == 'POST': 
-        EQ_ID = request.form['EQ_ID']
-        Tittle_EQ = request.form['Tittle_EQ']
-        Status = request.form['Status']
-        cursor = mysql.connection.cursor()
-        #INSERT status == notav VVV
-        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
-        mysql.connection.commit()
-        cursor.close()
-        return f"update status equipment success!!"
-    if request.method == 'DELETE':
-        EQ_ID = request.form['EQ_ID']
-        Tittle_EQ = request.form['Tittle_EQ']
-        Status = request.form['Status']
-        Expireddate = request.form['Expireddate']
-        Returndate = request.form['Returndate']
-        cursor = mysql.connection.cursor()
-        #DELETE status == av VVV
-        cursor.execute(''' UPDATE FROM jiwjiw WHERE id = (%s)''',(EQ_ID))
-        mysql.connection.commit()
-        cursor.close()
-        return f"update status equipment success!!"
-
-mock_borrow_data = [("456135461451","s6401012620234", str(date(2023,3,19)), str(date(2023,4,19)), "08spn491324619")]
+mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
 
 def find_account(user, password):
-    # print(user, password)
-    
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
     cursor = mysql.connection.cursor()
     cursor.execute('''SELECT * FROM user WHERE s_id=(%s) ''',(user,))
@@ -206,8 +73,11 @@ def login():
         password = request.form["password"]
         account = find_account(user, password)
         if account:
-            access_token = create_access_token(identity=account)
-            return {"access_token":access_token, "role":account["role"]}
+            userinfo = {}
+            userinfo["sid"] = account["user_id"]
+            userinfo["role"] = account["role"]
+            access_token = create_access_token(identity=userinfo)
+            return {"access_token":access_token, "role":userinfo["role"], "id":userinfo["sid"]}
     return {"msg":"Wrong user ID or password."}
 
 @app.route('/register', methods=['POST'])
@@ -220,25 +90,19 @@ def register():
     if name == "" or lastname == "" or major == "" or year == "" \
         or student_id == "" or request.form['password'] == "":
         return {"msg":"There are some fields that you have left blank."}
-    
     password = generate_password_hash(request.form['password'])
-    # password = request.form['password']
     #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
     cursor = mysql.connection.cursor()
     cursor.execute('''SELECT s_id FROM user ''')
     data = cursor.fetchall()
     u_id = [ temp[0] for temp in data ]
-
     if student_id not in u_id :
         #เพิ่ม user คนใหม่
         cursor.execute('''INSERT INTO user(s_id,password,f_name,s_name,major,year,role) VALUES(%s,%s,%s,%s,%s,%s,'1')''',(student_id,password,name,lastname,major,year))
         mysql.connection.commit()
-
         userinfo = {"sid":student_id, "role":"user"}
         access_token = create_access_token(identity=userinfo)
-        
-        cursor.close()
-        return {"access_token":access_token, "role":"user"}
+        return {"access_token":access_token, "role":"user", "id":userinfo["sid"]}
     else:
         cursor.close()
         return {"msg":"This id is already registered."}
@@ -258,16 +122,15 @@ def equipments_lists():
         sid = ""
         s_dep = ""
         s_year = ""
+        image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+        with open(image_name, 'rb') as image_file:
+            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
         for borrow in mock_borrow_data:
-            # image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
-            # with open(image_name, 'rb') as image_file:
-            #     encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
             if borrow[0] == eqm_id:
                 sid = borrow[1]
                 s_dep = mock_users_data[sid]["major"]
                 s_year = mock_users_data[sid]["year"]
                 break
-
         response.append(    {   
                                 "id":eqm_id,
                                 "title":eqm[2],
@@ -281,7 +144,6 @@ def equipments_lists():
                                 # "image": encoded_image
                             })
     return jsonify(response)
-
 
 @app.route('/<string:sid>/borrowing', methods=["GET"])
 @jwt_required()
@@ -313,48 +175,156 @@ def borrowed_equipments(sid):
         return {"msg":"Unauthorized access"}, 401
     except:
         return {"msg": "Internal server error"}, 500
-    
 
-@app.route('/<string:admin_id>/admin_request', methods=["GET", "PUT", "DELETE"])
+@app.route("/<string:admin_id>/admin_equipment", methods=["GET", "PUT", "POST"])
 @jwt_required()
-def requests_page(admin_id):
-    if request.method == "GET":
-        pass
-    elif request.method == "PUT":
-        pass
-    elif request.method == "DELETE":
-        pass
+def admin_eqm_detail(admin_id):
+    try:
+        decoded = get_jwt()
+        if "sub" in decoded:
+            if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
+                if request.method == "GET":
+                    response = []
+                    #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
+                    for eqm in mock_equipment_data:
+                        eqm_id = eqm[0]
+                        sid = ""
+                        s_dep = ""
+                        s_year = ""
+                        borrow_date = ""
+                        return_date = ""
+                        for borrow in mock_borrow_data:
+                            #รูป
+                            image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+                            with open(image_name, 'rb') as image_file:
+                                encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                            #-------------------------------------------------------------------------
+                            if borrow[0] == eqm_id:
+                                sid = borrow[1]
+                                s_dep = mock_users_data[sid]["major"]
+                                s_year = mock_users_data[sid]["year"]
+                                borrow_date = borrow[2]
+                                return_date = borrow[3]
+                                break
+                        response.append(    {   
+                                                "id":eqm_id,
+                                                "title":eqm[1],
+                                                "type":eqm[2],
+                                                "category":eqm[3],
+                                                "status": eqm[4],
+                                                "location": eqm[5],
+                                                "department":s_dep,
+                                                "year":s_year,
+                                                "studentid": sid,
+                                                "image": encoded_image,
+                                                "borrow_date":borrow_date,
+                                                "expiredate":return_date
+                                            })
+                    return jsonify(response)
+                if request.method == "PUT":
+                    #ช่างหัวมันเรื่องรูป
+                    title = request.form["title"]
+                    eqm_id = request.form["id"]
+                    status = request.form["status"]
+                    eqm_type = request.form["type"]
+                    category = request.form["category"]
+                    location = request.form["location"]
+                    if status == "Available":
+                        #ดึงข้อมูล eqm มา-------------------------------------------
+                        for num in range(len(mock_equipment_data)):
+                            if mock_equipment_data[num][0] == eqm_id:
+                                #ดึงข้อมูลการยืม eqm นี้มา (ใช้ ID เรียก)---------------------------
+                                #ถ้ามีให้ลบข้อมูลการยืมออก--------------------------------------
+                                if mock_equipment_data[num][4] == "Unavailable":
+                                    copy_borrow_data = mock_borrow_data.copy()  
+                                    for borrow in copy_borrow_data:
+                                        if borrow[0] == mock_equipment_data[num][0]:
+                                            mock_borrow_data.remove(borrow)
+                                    del copy_borrow_data
 
-@app.route('/<string:admin_id>/admin_equipment', methods=["GET", "POST", "DELETE", "PUT"])
+                                #อัปเดทรายละเอียด equipment
+                                mock_equipment_data[num] = (eqm_id, title, category, eqm_type, status, location, "placeholder.png")
+                                return {"msg":"Updated successfully"}
+                            return {"msg":"The equipment doesn't exists"}
+                    elif status == "Unavailable":
+                        student_id = request.form["sid"]
+                        student_name = request.form["name"]
+                        borrow_date = request.form["Borrow_date"]
+                        return_date = request.form["Return_date"]
+                        #ดึง Student_id นี้จาก Database ถ้ามีทำงานต่อ ถ้าไม่มี return message
+                        if student_id not in mock_users_data:
+                            return {"msg":"This user doesn't exist."}
+                        #ดึงข้อมูล eqm มา-------------------------------------------
+                        for num in range(len(mock_equipment_data)):
+                            if mock_equipment_data[num][0] == eqm_id:
+                                #ดึงข้อมูลการยืม eqm นี้มา (ใช้ ID เรียก)---------------------------
+                                if mock_equipment_data[num][4] == "Available":
+                                    #เพิ่มข้อมูลการยืม (E_ID, S_ID, borrow_date, return_date, A_ID)
+                                    mock_borrow_data.append((mock_equipment_data[num][0], student_id, borrow_date, return_date, admin_id))
+                                elif mock_equipment_data[num][4] == "Unavailable":
+                                    #เปลี่ยนรายละเอียดการยืม
+                                    for i in range(len(mock_borrow_data)):
+                                        if mock_borrow_data[i][0] == mock_equipment_data[num][0]:
+                                            mock_borrow_data[i] = (mock_equipment_data[num][0], student_id, borrow_date, return_date, admin_id)
+                                #อัปเดทรายละเอียด equipment
+                                mock_equipment_data[num] = (eqm_id, title, category, eqm_type, status, location, "placeholder.png")
+                                return {"msg":"Update successfully"}
+                            return {"msg":"The equipment doesn't exists"}
+                if request.method == "POST":
+                    pass #รอโค้ดน้องบิว
+    except:
+        return {"msg": "Internal server error"}, 500
+
+@app.route("/<string:admin_id>/admin_equipment/delete/<string:eqm_id>", methods=["DELETE"])
 @jwt_required()
-def equipment_detail(admin_id):
-    if request.method == "GET":
-        pass
-    elif request.method == "POST":
-        pass
-    elif request.method == "PUT":
-        pass
-    elif request.method == "DELETE":
-        pass
+def delete_equipment(admin_id, eqm_id):
+    try:
+        decoded = get_jwt()
+        if "sub" in decoded:
+            if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
+                #ลบการยืม eqm นี้ออกจาก database
+                #ลบ eqm นี้ออกจาก database
+                target_eqm = None
+                for num in range(len(mock_equipment_data)):
+                    if mock_equipment_data[num][0] == eqm_id:
+                        target_eqm = mock_equipment_data[num]
+                        break
+                if target_eqm:
+                    copy_borrow_data = mock_borrow_data.copy()  
+                    for borrow in copy_borrow_data:
+                        if borrow[0] == target_eqm[0]:
+                            mock_borrow_data.remove(borrow)
+                    del copy_borrow_data
+                    mock_equipment_data.remove(target_eqm)
+                #----------------------------------------------------------------------------
+                    #เจอ eqm นั้น
+                    return {"msg":f"Equipment of id {eqm_id} is deleted successfully."}
+                else:
+                    #ไม่เจอ eqm นั้น
+                    return {"msg":f"Equipment of id {eqm_id} doesn't exists."}
+            return {"msg": "Unauthorized access"} , 401
+    except:
+        return {"msg": "Internal server error"}, 500
 
 @app.route('/<string:admin_id>/admin_control/add_admin', methods=["POST"])
 @jwt_required()
-def edit_admin_member(admin_id):
+def add_admin_member(admin_id):
     try:
         decoded = get_jwt()
-        name = request.form['name']
-        lastname = request.form['surname']
-        depart = request.form['depart']
-        newadmin_id = request.form['sid']
-        password = generate_password_hash(request.form['password'])
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
+                name = request.form['name']
+                lastname = request.form['surname']
+                depart = request.form['depart']
+                newadmin_id = request.form['sid']
+                password = generate_password_hash(request.form['password'])
                 #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
                 if newadmin_id not in mock_admins_data and newadmin_id not in mock_users_data:
                     #เพิ่ม admin คนใหม่
                     mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"depart":depart,"password":password}
-                    admininfo = {"sid":newadmin_id, "role":"admin"}
-                    return {"msg":"add successful"}
+                    #ลงทะเบียนสำเร็จ
+                    return {"msg":f"Admin {newadmin_id} is added successfully"}
+                #ลงทะเบียนไปแล้ว
                 return {"msg":"Already registered"}
             return {"msg": "Unauthorized access"} , 401
     except:
