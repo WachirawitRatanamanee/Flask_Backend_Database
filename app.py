@@ -45,7 +45,7 @@ def find_account(user, password):
     if data and check_password_hash(data[0][2],password) :
         account = {
             "sid" :data[0][1],
-            "role" : "student" if data[0][-1] else "admin"
+            "role" : "user" if data[0][-1] else "admin"
             }
     cursor.close()
     return account
@@ -75,7 +75,7 @@ def login():
         account = find_account(user, password)
         if account:
             userinfo = {}
-            userinfo["sid"] = account["user_id"]
+            userinfo["sid"] = account["sid"]
             userinfo["role"] = account["role"]
             access_token = create_access_token(identity=userinfo)
             return {"access_token":access_token, "role":userinfo["role"], "id":userinfo["sid"]}
@@ -123,7 +123,7 @@ def equipments_lists():
         sid = ""
         s_dep = ""
         s_year = ""
-        image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+        image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6]))
         with open(image_name, 'rb') as image_file:
             encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
         for borrow in mock_borrow_data:
@@ -159,7 +159,7 @@ def borrowed_equipments(sid):
                     if borrow[1] == sid:
                         for eqm in mock_equipment_data:
                             if eqm[0] == borrow[0]:
-                                image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
+                                image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6]))
                                 with open(image_name, 'rb') as image_file:
                                     encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
                                 response.append( { "id":eqm[0],
@@ -168,7 +168,7 @@ def borrowed_equipments(sid):
                                                     "category":eqm[3],
                                                     "status": eqm[4],
                                                     "location": eqm[5],
-                                                    "img":encoded_image
+                                                    # "img":encoded_image
                                                     })
                                 break
                 return jsonify(response)
