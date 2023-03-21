@@ -342,14 +342,18 @@ def add_admin_member(admin_id):
                 lastname = request.form['surname']
                 newadmin_id = request.form['sid']
                 password = generate_password_hash(request.form['password'])
-                #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
-                if newadmin_id not in mock_admins_data and newadmin_id not in mock_users_data:
-                    #เพิ่ม admin คนใหม่
-                    mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"password":password}
-                    #ลงทะเบียนสำเร็จ
+                cursor = mysql.connection.cursor()
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                cursor.execute('''SELECT s_id, password, role  
+                                    FROM user 
+                                    WHERE s_id = (%s) ''',(newadmin_id,))
+                data = cursor.fetchall()
+                if not data :
+                    cursor.execute('''INSERT INTO `user`(`s_id`, `password`, `f_name`, `s_name`, `role`) 
+                                        VALUES (%s,%s,%s,%s,'0') ''',(newadmin_id,password,name,lastname,))
+                    mysql.connection.commit()
                     return {"msg":f"Admin {newadmin_id} is added successfully"}
-                #แอดมินคนนั้นลงทะเบียนไปแล้ว
-                return {"msg":"Already registered"}
+                return {"msg":f"{newadmin_id} has been already registered"}
             return {"msg": "Unauthorized access"} , 401
     except:
         return {"msg": "Internal server error"}, 500
