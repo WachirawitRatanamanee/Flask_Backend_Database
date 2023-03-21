@@ -366,11 +366,19 @@ def delete_admin(admin_id, delete_id):
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 #ลบ Admin ที่มี id ตรงกับ delete_id
-                if delete_id in mock_admins_data:
-                    del mock_admins_data[delete_id]
-                    #เจอแอดมินคนนั้นและลบสำเร็จ
+                cursor = mysql.connection.cursor()
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                cursor.execute('''SELECT s_id, role  
+                                    FROM user 
+                                    WHERE s_id = (%s) and role='0' ''',(delete_id,))
+                data = cursor.fetchall()
+                print(delete_id)
+                print("data = ",data)
+                if data and data[0][0] != "admin" :
+                    cursor.execute('''DELETE FROM user WHERE s_id =(%s) ''',(delete_id,))
+                    mysql.connection.commit()
                     return {"msg":f"Deletion of admin {delete_id} is successful."}, 200
-                #ไม่#เจอแอดมินคนนั้นและลบไม้สำเร็จ
+
                 return {"msg":f"No admin {delete_id} exists."}, 404
             return {"msg":"Unauthorized address"}, 403
         return {"msg":"Unauthorized address"}, 403
