@@ -41,12 +41,12 @@ mock_borrow_data = [("456135461451","5", date(2023,3,19).strftime('%Y-%m-%d'), d
 def find_account(user, password):
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
     cursor = mysql.connection.cursor()
-    cursor.execute('''SELECT * FROM user WHERE s_id=(%s) ''',(user,))
+    cursor.execute('''SELECT s_id,password,role FROM user WHERE s_id=(%s) ''',(user,))
     data = cursor.fetchall()
     account= {}
-    if data and check_password_hash(data[0][2],password) :
+    if data and check_password_hash(data[0][1],password) :
         account = {
-            "sid" :data[0][1],
+            "sid" :data[0][0],
             "role" : "user" if data[0][-1] else "admin"
             }
     cursor.close()
@@ -76,11 +76,8 @@ def login():
         password = request.form["password"]
         account = find_account(user, password)
         if account:
-            userinfo = {}
-            userinfo["sid"] = account["sid"]
-            userinfo["role"] = account["role"]
-            access_token = create_access_token(identity=userinfo)
-            return {"access_token":access_token, "role":userinfo["role"], "id":userinfo["sid"]}
+            access_token = create_access_token(identity=account)
+            return {"access_token":access_token, "role":account["role"], "id":account["sid"]}
     return {"msg":"Wrong user ID or password."}
 
 @app.route('/register', methods=['POST'])
