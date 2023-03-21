@@ -150,15 +150,18 @@ def borrowed_equipments(sid):
             if decoded["sub"]["sid"] == sid and decoded["sub"]["role"] == "user":
                 response = []
                 cursor = mysql.connection.cursor()
-                cursor.execute('''SELECT equipment.eq_id,equipment.eq_name,equipment.eq_type,equipment.category,equipment.location,equipment.status 
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category,
+                                    equipment.location, equipment.status, equipment.img
                                     FROM eq_borrow INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
                                     WHERE eq_borrow.s_id = (%s) ''',(sid,))
                 data = cursor.fetchall()
-                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
                 for borrow in data:
-                    image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-                    with open(image_name, 'rb') as image_file:
-                            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                    image_data = borrow[6]  # assuming that the image data is at index 7
+                    if image_data:
+                        encoded_image = base64.b64encode(image_data).decode('utf-8')
+                    else:
+                        encoded_image = None
                     response.append( { "id":borrow[0],
                                         "title":borrow[1],
                                         "type":borrow[2],
