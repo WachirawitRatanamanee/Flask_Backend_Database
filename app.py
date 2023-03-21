@@ -365,9 +365,9 @@ def delete_admin(admin_id, delete_id):
                 if delete_id in mock_admins_data:
                     del mock_admins_data[delete_id]
                     #เจอแอดมินคนนั้นและลบสำเร็จ
-                    return {"msg":f"Deletion of admin {delete_id} is successful."},402
+                    return {"msg":f"Deletion of admin {delete_id} is successful."}, 200
                 #ไม่#เจอแอดมินคนนั้นและลบไม้สำเร็จ
-                return {"msg":f"No admin {delete_id} exists."} ,402
+                return {"msg":f"No admin {delete_id} exists."}, 404
             return {"msg":"Unauthorized address"}, 403
         return {"msg":"Unauthorized address"}, 403
     except:
