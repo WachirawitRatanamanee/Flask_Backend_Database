@@ -114,31 +114,31 @@ def register():
 @app.route('/equipments', methods=["GET"])
 def equipments_lists():
     response = []
-    count = 0 
     cursor = mysql.connection.cursor()
-    cursor.execute('''SELECT * FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
+    cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
+                    equipment.location, user.major, user.year, user.s_id, equipment.img 
+                    FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
+                    LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
     data = cursor.fetchall()
     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
     for eqm in data:
-        count += 1
-        eqm_id = eqm[3]
-        image_data = eqm[7]  # assuming that the image data is at index 7
+        image_data = eqm[9]  # assuming that the image data is at index 7
         if image_data:
             encoded_image = base64.b64encode(image_data).decode('utf-8')
         else:
             encoded_image = None
-        response.append(    {   
-                                "id":eqm_id,
-                                "title":eqm[2],
-                                "type":eqm[1],
-                                "category":eqm[4],
-                                "status": eqm[6],
-                                "location": eqm[5],
-                                "department":eqm[18] if eqm[18] else "-",
-                                "year": eqm[19] if eqm[19] else "-" ,
-                                "studentid": eqm[14] if eqm[14] else "-",
-                                "image": encoded_image
-                            })
+        response.append({   
+                            "id":eqm[0],
+                            "title":eqm[1],
+                            "type":eqm[2],
+                            "category":eqm[3],
+                            "status": eqm[4],
+                            "location": eqm[5],
+                            "department":eqm[6] if eqm[6] else "-",
+                            "year": eqm[7] if eqm[7] else "-" ,
+                            "studentid": eqm[8] if eqm[8] else "-",
+                            "image": encoded_image
+                        })
     return jsonify(response)
 
 @app.route('/<string:sid>/borrowing', methods=["GET"])
@@ -150,15 +150,18 @@ def borrowed_equipments(sid):
             if decoded["sub"]["sid"] == sid and decoded["sub"]["role"] == "user":
                 response = []
                 cursor = mysql.connection.cursor()
-                cursor.execute('''SELECT equipment.eq_id,equipment.eq_name,equipment.eq_type,equipment.category,equipment.location,equipment.status 
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category,
+                                    equipment.location, equipment.status, equipment.img
                                     FROM eq_borrow INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
                                     WHERE eq_borrow.s_id = (%s) ''',(sid,))
                 data = cursor.fetchall()
-                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
                 for borrow in data:
-                    image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-                    with open(image_name, 'rb') as image_file:
-                            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                    image_data = borrow[6]  # assuming that the image data is at index 7
+                    if image_data:
+                        encoded_image = base64.b64encode(image_data).decode('utf-8')
+                    else:
+                        encoded_image = None
                     response.append( { "id":borrow[0],
                                         "title":borrow[1],
                                         "type":borrow[2],
