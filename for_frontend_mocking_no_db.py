@@ -264,7 +264,20 @@ def admin_eqm_detail(admin_id):
                             return {"msg":"The equipment doesn't exists"}
 
                 if request.method == "POST":
-                    pass #รอโค้ดน้องบิว
+                    title = request.form['title']
+                    eqm_id = request.form['eqm_id']
+                    eqm_type = request.form['eqm_type']
+                    category = request.form['category']
+                    location = request.form['location']
+
+                    #ดึงข้อมูล eqmid เพื่อดูว่ายังไม่มีใช่หรือไม่
+                    for num in range(len(mock_equipment_data)):
+                        if mock_equipment_data[num][0] == eqm_id:
+                            return {"msg":"This equipment already exists."}
+
+
+                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
+                    return {"msg":"This equipment added successfully."}
 
     except:
         return {"msg": "Internal server error"}, 500
