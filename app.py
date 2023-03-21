@@ -10,6 +10,9 @@ import os
 import base64
 from flask_mysqldb import MySQL
 
+
+import io
+
 app = Flask(__name__)
 CORS(app)
 
@@ -119,9 +122,11 @@ def equipments_lists():
     for eqm in data:
         count += 1
         eqm_id = eqm[3]
-        image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-        with open(image_name, 'rb') as image_file:
-            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+        image_data = eqm[7]  # assuming that the image data is at index 7
+        if image_data:
+            encoded_image = base64.b64encode(image_data).decode('utf-8')
+        else:
+            encoded_image = None
         response.append(    {   
                                 "id":eqm_id,
                                 "title":eqm[2],
@@ -266,6 +271,22 @@ def admin_eqm_detail(admin_id):
                     eqm_type = request.form['eqm_type']
                     category = request.form['category']
                     location = request.form['location']
+
+                    #---------------------------------------------------------
+                    #Code to insert image to DB type longblob
+                    #ให้นำ code ไป implement ได้เลย
+                    # Retrieve the image file from the form data
+                    image_file = request.files['image']
+                    # Convert the image file to binary data
+                    #make sure you are import io at header
+                    image_data = io.BytesIO(image_file.read())
+                    cursor = mysql.connection.cursor()
+                    # Insert the image data into the database as a longblob
+                    cursor.execute('''INSERT INTO test (image) VALUES (%s)''', (image_data.getvalue(),))
+                    mysql.connection.commit()
+                    # Close the database connection
+                    cursor.close()
+                    #------------------------------------------------------------------
 
                     #ดึงข้อมูล eqmid เพื่อดูว่ายังไม่มีใช่หรือไม่
                     for num in range(len(mock_equipment_data)):
