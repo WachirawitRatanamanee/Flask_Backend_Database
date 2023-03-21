@@ -340,13 +340,12 @@ def add_admin_member(admin_id):
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 name = request.form['name']
                 lastname = request.form['surname']
-                depart = request.form['depart']
                 newadmin_id = request.form['sid']
                 password = generate_password_hash(request.form['password'])
                 #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
                 if newadmin_id not in mock_admins_data and newadmin_id not in mock_users_data:
                     #เพิ่ม admin คนใหม่
-                    mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"depart":depart,"password":password}
+                    mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"password":password}
                     #ลงทะเบียนสำเร็จ
                     return {"msg":f"Admin {newadmin_id} is added successfully"}
                 #แอดมินคนนั้นลงทะเบียนไปแล้ว
@@ -366,9 +365,9 @@ def delete_admin(admin_id, delete_id):
                 if delete_id in mock_admins_data:
                     del mock_admins_data[delete_id]
                     #เจอแอดมินคนนั้นและลบสำเร็จ
-                    return {"msg":f"Deletion of admin {delete_id} is successful."}
+                    return {"msg":f"Deletion of admin {delete_id} is successful."},402
                 #ไม่#เจอแอดมินคนนั้นและลบไม้สำเร็จ
-                return {"msg":f"No admin {delete_id} exists."}
+                return {"msg":f"No admin {delete_id} exists."} ,402
             return {"msg":"Unauthorized address"}, 403
         return {"msg":"Unauthorized address"}, 403
     except:
