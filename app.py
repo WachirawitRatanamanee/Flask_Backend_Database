@@ -182,7 +182,6 @@ def admin_eqm_detail(admin_id):
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 if request.method == "GET":
-                    print("GET")
                     response = []
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT equipment.eq_id,equipment.eq_name,equipment.eq_type,equipment.category,equipment.status,
@@ -190,10 +189,8 @@ def admin_eqm_detail(admin_id):
                     FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
                     LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
                     data = cursor.fetchall()
-                    print(data)
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
                     for eqm in data:
-                        print("eqm = ",eqm)
                         image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
                         with open(image_name, 'rb') as image_file:
                             encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
@@ -305,25 +302,15 @@ def delete_equipment(admin_id, eqm_id):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
-                #ลบ borrow eqm นี้ออกจาก database
-                #ลบ eqm นี้ออกจาก database
-                target_eqm = None
-                for num in range(len(mock_equipment_data)):
-                    if mock_equipment_data[num][0] == eqm_id:
-                        target_eqm = mock_equipment_data[num]
-                if target_eqm:
-                    copy_borrow_data = mock_borrow_data.copy()  
-                    for borrow in copy_borrow_data:
-                        if borrow[0] == target_eqm[0]:
-                            mock_borrow_data.remove(borrow)
-                    del copy_borrow_data
-                    mock_equipment_data.remove(target_eqm)
+                print("id = ",eqm_id)
+                cursor = mysql.connection.cursor()
+                cursor.execute('''DELETE equipment.*,eq_borrow.* FROM `equipment` 
+                LEFT JOIN eq_borrow ON eq_borrow.eq_id = equipment.eq_id 
+                WHERE equipment.eq_id=(%s)  ''',(eqm_id,))
+                mysql.connection.commit()
                 #----------------------------------------------------------------------------
                     #ลบเสร็จสิ้น
-                    return {"msg":f"Equipment of id {eqm_id} is deleted successfully."}
-                else:
-                    #ไม่เจอ eqm นั้น
-                    return {"msg":f"Equipment of id {eqm_id} doesn't exists."}
+                return {"msg":f"Equipment of id {eqm_id} is deleted successfully."}
             return {"msg": "Unauthorized access"} , 401
     except:
         return {"msg": "Internal server error"}, 500
