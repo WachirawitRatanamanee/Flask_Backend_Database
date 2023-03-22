@@ -9,8 +9,6 @@ from werkzeug.utils import secure_filename
 import os
 import base64
 from flask_mysqldb import MySQL
-
-
 import io
 
 app = Flask(__name__)
@@ -19,7 +17,7 @@ CORS(app)
 app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
- 
+
 #Frontend API connection tests begin here
 
 app.config['MYSQL_HOST'] = 'localhost'
@@ -30,23 +28,21 @@ mysql = MySQL(app)
 
 image_folder = os.path.abspath("static/images")
 
-mock_users_data = {"5":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
+mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
-mock_equipment_data = [
-    ("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), 
-    ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
+mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
 mock_material_data = []
-mock_borrow_data = [("456135461451","5", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
+mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
 
 def find_account(user, password):
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
     cursor = mysql.connection.cursor()
-    cursor.execute('''SELECT * FROM user WHERE s_id=(%s) ''',(user,))
+    cursor.execute('''SELECT s_id,password,role FROM user WHERE s_id=(%s) ''',(user,))
     data = cursor.fetchall()
     account= {}
-    if data and check_password_hash(data[0][2],password) :
+    if data and check_password_hash(data[0][1],password) :
         account = {
-            "sid" :data[0][1],
+            "sid" :data[0][0],
             "role" : "user" if data[0][-1] else "admin"
             }
     cursor.close()
@@ -76,11 +72,8 @@ def login():
         password = request.form["password"]
         account = find_account(user, password)
         if account:
-            userinfo = {}
-            userinfo["sid"] = account["sid"]
-            userinfo["role"] = account["role"]
-            access_token = create_access_token(identity=userinfo)
-            return {"access_token":access_token, "role":userinfo["role"], "id":userinfo["sid"]}
+            access_token = create_access_token(identity=account)
+            return {"access_token":access_token, "role":account["role"], "id":account["sid"]}
     return {"msg":"Wrong user ID or password."}
 
 @app.route('/register', methods=['POST'])
@@ -114,31 +107,31 @@ def register():
 @app.route('/equipments', methods=["GET"])
 def equipments_lists():
     response = []
-    count = 0 
     cursor = mysql.connection.cursor()
-    cursor.execute('''SELECT * FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
+    cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
+                    equipment.location, user.major, user.year, user.s_id, equipment.img 
+                    FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
+                    LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
     data = cursor.fetchall()
     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
     for eqm in data:
-        count += 1
-        eqm_id = eqm[3]
-        image_data = eqm[7]  # assuming that the image data is at index 7
+        image_data = eqm[9]  # assuming that the image data is at index 7
         if image_data:
             encoded_image = base64.b64encode(image_data).decode('utf-8')
         else:
             encoded_image = None
-        response.append(    {   
-                                "id":eqm_id,
-                                "title":eqm[2],
-                                "type":eqm[1],
-                                "category":eqm[4],
-                                "status": eqm[6],
-                                "location": eqm[5],
-                                "department":eqm[18] if eqm[18] else "-",
-                                "year": eqm[19] if eqm[19] else "-" ,
-                                "studentid": eqm[14] if eqm[14] else "-",
-                                "image": encoded_image
-                            })
+        response.append({   
+                            "id":eqm[0],
+                            "title":eqm[1],
+                            "type":eqm[2],
+                            "category":eqm[3],
+                            "status": eqm[4],
+                            "location": eqm[5],
+                            "department":eqm[6] if eqm[6] else "-",
+                            "year": eqm[7] if eqm[7] else "-" ,
+                            "studentid": eqm[8] if eqm[8] else "-",
+                            "image": encoded_image
+                        })
     return jsonify(response)
 
 @app.route('/<string:sid>/borrowing', methods=["GET"])
@@ -149,22 +142,27 @@ def borrowed_equipments(sid):
         if "sub" in decoded:
             if decoded["sub"]["sid"] == sid and decoded["sub"]["role"] == "user":
                 response = []
+                cursor = mysql.connection.cursor()
                 #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
-                for borrow in mock_borrow_data:
-                    if borrow[1] == sid:
-                        for eqm in mock_equipment_data:
-                            if eqm[0] == borrow[0]:
-                                image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-                                with open(image_name, 'rb') as image_file:
-                                     encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                                response.append( { "id":eqm[0],
-                                                    "title":eqm[1],
-                                                    "type":eqm[2],
-                                                    "category":eqm[3],
-                                                    "status": eqm[4],
-                                                    "location": eqm[5],
-                                                    "image": encoded_image
-                                                    })
+                cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category,
+                                    equipment.location, equipment.status, equipment.img
+                                    FROM eq_borrow INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
+                                    WHERE eq_borrow.s_id = (%s) ''',(sid,))
+                data = cursor.fetchall()
+                for borrow in data:
+                    image_data = borrow[6]  # assuming that the image data is at index 7
+                    if image_data:
+                        encoded_image = base64.b64encode(image_data).decode('utf-8')
+                    else:
+                        encoded_image = None
+                    response.append( { "id":borrow[0],
+                                        "title":borrow[1],
+                                        "type":borrow[2],
+                                        "category":borrow[3],
+                                        "status": borrow[4],
+                                        "location": borrow[5],
+                                        "image": encoded_image
+                                        })
                 return jsonify(response)
             return {"msg":"Wrong User"}, 404
         return {"msg":"Unauthorized access"}, 401
@@ -180,34 +178,36 @@ def admin_eqm_detail(admin_id):
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 if request.method == "GET":
                     response = []
+                    cursor = mysql.connection.cursor()
+                    cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
+                    equipment.location, user.major, user.year, user.s_id , user.f_name, user.s_name
+                    FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
+                    LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
+                    data = cursor.fetchall()
+                    print(data)
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
-                    for eqm in mock_equipment_data:
-                        eqm_id = eqm[0]
-                        for borrow in mock_borrow_data:
-                            image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-                            with open(image_name, 'rb') as image_file:
-                                encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                            if borrow[0] == eqm_id:
-                                sid = borrow[1]
-                                s_dep = mock_users_data[sid]["major"]
-                                s_year = mock_users_data[sid]["year"]
-                                borrow_date = borrow[2]
-                                return_date = borrow[3]
-                        response.append(    {   
-                                                "id":eqm_id,
-                                                "title":eqm[1],
-                                                "type":eqm[2],
-                                                "category":eqm[3],
-                                                "status": eqm[4],
-                                                "location": eqm[5],
-                                                "department":s_dep,
-                                                "year":s_year,
-                                                "studentid": sid,
-                                                "image": encoded_image,
-                                                "borrow_date":borrow_date,
-                                                "expiredate":return_date
-                                            })
+                    for eqm in data:
+                        image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
+                        with open(image_name, 'rb') as image_file:
+                            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                        name = eqm[9]," ",eqm[10]
+                        response.append({   
+                                            "id":eqm[0],
+                                            "title":eqm[1],
+                                            "type":eqm[2],
+                                            "category":eqm[3],
+                                            "status": eqm[4],
+                                            "location": eqm[5],
+                                            "department":eqm[6],
+                                            "year":eqm[7],
+                                            "studentid": eqm[8],
+                                            "image": encoded_image,
+                                            "borrow_date":"borrow_date",
+                                            "expiredate":"return_date",
+                                            "name": name , 
+                                        })
                     return jsonify(response)
+                
                 if request.method == "PUT":
                     #ช่างหัวมันเรื่องรูป
                     title = request.form["title"]
@@ -266,13 +266,6 @@ def admin_eqm_detail(admin_id):
                     location = request.form['location']
 
                     #---------------------------------------------------------
-                    #Code to insert image to DB type longblob
-                    #ให้นำ code ไป implement ได้เลย
-                    # Retrieve the image file from the form data
-                    image_file = request.files['image']
-                    # Convert the image file to binary data
-                    #make sure you are import io at header
-                    image_data = io.BytesIO(image_file.read())
                     cursor = mysql.connection.cursor()
                     # Insert the image data into the database as a longblob
                     cursor.execute('''INSERT INTO test (image) VALUES (%s)''', (image_data.getvalue(),))
@@ -285,8 +278,8 @@ def admin_eqm_detail(admin_id):
                     for num in range(len(mock_equipment_data)):
                         if mock_equipment_data[num][0] == eqm_id:
                             return {"msg":"This equipment already exists."}
-                    #เพิ่มเข้ารายงานให้ยืมได้ โดย status เป็น Available
-                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "Available", location, "placeholder.png"))
+ 
+                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
                     return {"msg":"This equipment added successfully."}
     except:
         return {"msg": "Internal server error"}, 500
@@ -298,25 +291,14 @@ def delete_equipment(admin_id, eqm_id):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
-                #ลบ borrow eqm นี้ออกจาก database
-                #ลบ eqm นี้ออกจาก database
-                target_eqm = None
-                for num in range(len(mock_equipment_data)):
-                    if mock_equipment_data[num][0] == eqm_id:
-                        target_eqm = mock_equipment_data[num]
-                if target_eqm:
-                    copy_borrow_data = mock_borrow_data.copy()  
-                    for borrow in copy_borrow_data:
-                        if borrow[0] == target_eqm[0]:
-                            mock_borrow_data.remove(borrow)
-                    del copy_borrow_data
-                    mock_equipment_data.remove(target_eqm)
+                cursor = mysql.connection.cursor()
+                cursor.execute('''DELETE equipment.*,eq_borrow.* FROM `equipment` 
+                LEFT JOIN eq_borrow ON eq_borrow.eq_id = equipment.eq_id 
+                WHERE equipment.eq_id=(%s)  ''',(eqm_id,))
+                mysql.connection.commit()
                 #----------------------------------------------------------------------------
                     #ลบเสร็จสิ้น
-                    return {"msg":f"Equipment of id {eqm_id} is deleted successfully."}
-                else:
-                    #ไม่เจอ eqm นั้น
-                    return {"msg":f"Equipment of id {eqm_id} doesn't exists."}
+                return {"msg":f"Equipment of id {eqm_id} is deleted successfully."}
             return {"msg": "Unauthorized access"} , 401
     except:
         return {"msg": "Internal server error"}, 500
@@ -330,17 +312,20 @@ def add_admin_member(admin_id):
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 name = request.form['name']
                 lastname = request.form['surname']
-                depart = request.form['depart']
                 newadmin_id = request.form['sid']
                 password = generate_password_hash(request.form['password'])
-                #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
-                if newadmin_id not in mock_admins_data and newadmin_id not in mock_users_data:
-                    #เพิ่ม admin คนใหม่
-                    mock_admins_data[newadmin_id] = {"name":name,"lastname":lastname,"depart":depart,"password":password}
-                    #ลงทะเบียนสำเร็จ
+                cursor = mysql.connection.cursor()
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                cursor.execute('''SELECT s_id, password, role  
+                                    FROM user 
+                                    WHERE s_id = (%s) ''',(newadmin_id,))
+                data = cursor.fetchall()
+                if not data :
+                    cursor.execute('''INSERT INTO `user`(`s_id`, `password`, `f_name`, `s_name`, `role`) 
+                                        VALUES (%s,%s,%s,%s,'0') ''',(newadmin_id,password,name,lastname,))
+                    mysql.connection.commit()
                     return {"msg":f"Admin {newadmin_id} is added successfully"}
-                #แอดมินคนนั้นลงทะเบียนไปแล้ว
-                return {"msg":"Already registered"}
+                return {"msg":f"{newadmin_id} has been already registered"}
             return {"msg": "Unauthorized access"} , 401
     except:
         return {"msg": "Internal server error"}, 500
@@ -353,16 +338,44 @@ def delete_admin(admin_id, delete_id):
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
                 #ลบ Admin ที่มี id ตรงกับ delete_id
-                if delete_id in mock_admins_data:
-                    del mock_admins_data[delete_id]
-                    #เจอแอดมินคนนั้นและลบสำเร็จ
-                    return {"msg":f"Deletion of admin {delete_id} is successful."}
-                #ไม่#เจอแอดมินคนนั้นและลบไม้สำเร็จ
-                return {"msg":f"No admin {delete_id} exists."}
+                cursor = mysql.connection.cursor()
+                #ดึงข้อมูล equipment ทุก equipment ที่ user (ID) คนนี้ยืม
+                cursor.execute('''SELECT s_id, role  
+                                    FROM user 
+                                    WHERE s_id = (%s) and role='0' ''',(delete_id,))
+                data = cursor.fetchall()
+                
+                if data and data[0][0] != "admin" :
+                    cursor.execute('''DELETE FROM user WHERE s_id =(%s) ''',(delete_id,))
+                    mysql.connection.commit()
+                    return {"msg":f"Deletion of admin {delete_id} is successful."}, 200
+
+                return {"msg":f"No admin {delete_id} exists."}, 404
             return {"msg":"Unauthorized address"}, 403
         return {"msg":"Unauthorized address"}, 403
     except:
         return {"msg": "Internal server error"}, 500
+
+@app.route('/sid', methods=["POST"])
+def sid():
+    response = []
+    s_id = request.form['sid']
+    cursor = mysql.connection.cursor()
+    cursor.execute('''SELECT s_id, f_name,s_name,year,major  
+                        FROM user 
+                        WHERE s_id = (%s) ''',(s_id,))
+    data = cursor.fetchall()
+    if data:
+        response.append({   
+                            "Name":data[0][1] + " "+ data[0][2] ,
+                            "year":data[0][3],
+                            "major":data[0][4],
+                        })
+        return jsonify(response)
+    else:
+        return {"msg": "no user"}, 404
+
+    
 
 @app.route("/logout", methods=["POST"])
 def logout():
