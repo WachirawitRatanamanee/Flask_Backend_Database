@@ -109,29 +109,49 @@ def equipments_lists():
     response = []
     cursor = mysql.connection.cursor()
     cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
-                    equipment.location, user.major, user.year, user.s_id, equipment.img 
-                    FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
-                    LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
+                    equipment.location, equipment.s_id, equipment.img
+                    FROM equipment 
+                     ''')
     data = cursor.fetchall()
+    print("eqm")
     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
     for eqm in data:
-        image_data = eqm[9]  # assuming that the image data is at index 9
+        image_data = eqm[6]  # assuming that the image data is at index 9
         if image_data:
             encoded_image = base64.b64encode(image_data).decode('utf-8')
         else:
             encoded_image = None
-        response.append({   
-                            "id":eqm[0],
-                            "title":eqm[1],
-                            "type":eqm[2],
-                            "category":eqm[3],
-                            "status": eqm[4],
-                            "location": eqm[5],
-                            "department":eqm[6] if eqm[6] else "-",
-                            "year": eqm[7] if eqm[7] else "-" ,
-                            "studentid": eqm[8] if eqm[8] else "-",
-                            "image": encoded_image
-                        })
+
+        if eqm[4] == "Unavailable":
+            cursor.execute('''SELECT major,year
+                    FROM user 
+                     ''')
+            user_data = cursor.fetchall()
+            response.append({   
+                                "id":eqm[0],
+                                "title":eqm[1],
+                                "type":eqm[2],
+                                "category":eqm[3],
+                                "status": eqm[4],
+                                "location": eqm[5],
+                                "department":user_data[0][0],
+                                "year": user_data[0][1] ,
+                                "studentid": eqm[5],
+                                "image": encoded_image
+                            })
+        else:
+            response.append({   
+                                "id":eqm[0],
+                                "title":eqm[1],
+                                "type":eqm[2],
+                                "category":eqm[3],
+                                "status": eqm[4],
+                                "location": eqm[5],
+                                "department":"-",
+                                "year": "-" ,
+                                "studentid": "-",
+                                "image": encoded_image
+                            })
     return jsonify(response)
 
 @app.route('/<string:sid>/borrowing', methods=["GET"])
@@ -180,13 +200,13 @@ def admin_eqm_detail(admin_id):
                     response = []
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
-                    equipment.location, equipment.s_id
+                    equipment.location, equipment.s_id, equipment.img
                     FROM equipment 
                      ''')
                     data = cursor.fetchall()
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
                     for eqm in data:
-                        image_data = eqm[6]  
+                        image_data = eqm[7]  
                         if image_data:
                             encoded_image = base64.b64encode(image_data).decode('utf-8')
                         else:
