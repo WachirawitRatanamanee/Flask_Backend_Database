@@ -176,7 +176,6 @@ def borrowed_equipments(sid):
 @app.route("/<string:admin_id>/admin_equipment", methods=["GET", "PUT", "POST"])
 @jwt_required()
 def admin_eqm_detail(admin_id):
-    print("ad eq")
     try:
         decoded = get_jwt()
         if "sub" in decoded:
@@ -262,7 +261,6 @@ def admin_eqm_detail(admin_id):
                             return {"msg":"The equipment doesn't exists"}
 
                 if request.method == "POST":
-                    print("POST")
                     title = request.form['title']
                     eqm_id = request.form['eqm_id']
                     eqm_type = request.form['eqm_type']
@@ -270,28 +268,21 @@ def admin_eqm_detail(admin_id):
                     location = request.form['location']
 
                     #---------------------------------------------------------
-                    #Code to insert image to DB type longblob
-                    #ให้นำ code ไป implement ได้เลย
-                    # Retrieve the image file from the form data
-                    image_file = request.files['image']
-                    # Convert the image file to binary data
-                    #make sure you are import io at header
-                    image_data = io.BytesIO(image_file.read())
                     cursor = mysql.connection.cursor()
-                    # Insert the image data into the database as a longblob
-                    cursor.execute('''INSERT INTO test (image) VALUES (%s)''', (image_data.getvalue(),))
-                    mysql.connection.commit()
-                    # Close the database connection
-                    cursor.close()
-                    #------------------------------------------------------------------
+                    cursor.execute('''SELECT eq_id FROM equipment ''')
+                    data = cursor.fetchall()
+                    eq_id = [ temp[0] for temp in data ]
 
-                    #ดึงข้อมูล eqmid เพื่อดูว่ายังไม่มีใช่หรือไม่
-                    for num in range(len(mock_equipment_data)):
-                        if mock_equipment_data[num][0] == eqm_id:
-                            return {"msg":"This equipment already exists."}
- 
-                    mock_equipment_data.append((eqm_id, title, category, eqm_type, "available", location, "placeholder.png"))
-                    return {"msg":"This equipment added successfully."}
+                    if not eqm_id in eq_id:
+                        cursor.execute('''INSERT INTO `equipment`(`eq_type`, `eq_name`, `eq_id`, `category`, `location`, `status`) 
+                        VALUES (%s,%s,%s,%s,%s,'Available')''',(eqm_type,title,eqm_id,category,location,))
+                        mysql.connection.commit()
+                        cursor.close()
+                        return {"msg":"This equipment added successfully."}
+                    else:
+                        cursor.close()
+                        return {"msg":f"This {eqm_id} has been already registered."}
+      
     except:
         return {"msg": "Internal server error"}, 500
 
@@ -302,7 +293,6 @@ def delete_equipment(admin_id, eqm_id):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
-                print("id = ",eqm_id)
                 cursor = mysql.connection.cursor()
                 cursor.execute('''DELETE equipment.*,eq_borrow.* FROM `equipment` 
                 LEFT JOIN eq_borrow ON eq_borrow.eq_id = equipment.eq_id 
@@ -356,8 +346,7 @@ def delete_admin(admin_id, delete_id):
                                     FROM user 
                                     WHERE s_id = (%s) and role='0' ''',(delete_id,))
                 data = cursor.fetchall()
-                print(delete_id)
-                print("data = ",data)
+                
                 if data and data[0][0] != "admin" :
                     cursor.execute('''DELETE FROM user WHERE s_id =(%s) ''',(delete_id,))
                     mysql.connection.commit()
