@@ -358,6 +358,28 @@ def delete_admin(admin_id, delete_id):
     except:
         return {"msg": "Internal server error"}, 500
 
+@app.route('/sid', methods=["POST"])
+def sid():
+    response = []
+    s_id = request.form['sid']
+    cursor = mysql.connection.cursor()
+    cursor.execute('''SELECT s_id, f_name,s_name,year,major  
+                        FROM user 
+                        WHERE s_id = (%s) ''',(s_id,))
+    data = cursor.fetchall()
+    if data:
+        response.append({   
+                            "Name":data[0][1] + " "+ data[0][2] ,
+                            "year":data[0][3],
+                            "major":data[0][4],
+                        })
+        print(response)
+        return jsonify(response)
+    else:
+        return {"msg": "no user"}, 404
+
+    
+
 @app.route("/logout", methods=["POST"])
 def logout():
     response = jsonify({"msg": "logout successful"})
