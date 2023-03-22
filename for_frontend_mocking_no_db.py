@@ -178,9 +178,11 @@ def admin_eqm_detail(admin_id):
                         s_year = ""
                         borrow_date = ""
                         return_date = ""
+                        #รูป
                         image_name = os.path.abspath(os.path.join(image_folder,eqm[6]))
                         with open(image_name, 'rb') as image_file:
                             encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                        #-------------------------------------------------------------------------
                         for borrow in mock_borrow_data:
                             if borrow[0] == eqm_id:
                                 sid = borrow[1]

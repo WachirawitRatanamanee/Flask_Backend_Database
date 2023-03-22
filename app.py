@@ -239,9 +239,7 @@ def admin_eqm_detail(admin_id):
                                         SET `status` = 'Unavailable'
                                         WHERE `eq_id` = (%s)''', (eqm_id,))
                         mysql.connection.commit()
-
                         return {"msg":"Updated successfully"}
-                        
                         
                     return {"msg":"ERROR"}
  
@@ -257,7 +255,6 @@ def admin_eqm_detail(admin_id):
                     cursor.execute('''SELECT eq_id FROM equipment ''')
                     data = cursor.fetchall()
                     eq_id = [ temp[0] for temp in data ]
-
                     if not eqm_id in eq_id:
                         cursor.execute('''INSERT INTO `equipment`(`eq_type`, `eq_name`, `eq_id`, `category`, `location`, `status`,`img`) 
                         VALUES (%s,%s,%s,%s,%s,'Available',%s)''',(eqm_type,title,eqm_id,category,location,image_data.getvalue(),))
