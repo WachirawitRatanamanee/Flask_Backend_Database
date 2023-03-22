@@ -9,8 +9,6 @@ from werkzeug.utils import secure_filename
 import os
 import base64
 from flask_mysqldb import MySQL
-
-
 import io
 
 app = Flask(__name__)
@@ -19,7 +17,7 @@ CORS(app)
 app.config["JWT_SECRET_KEY"] = "0d51f3ad3f5aw0da56sa"
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
- 
+
 #Frontend API connection tests begin here
 
 app.config['MYSQL_HOST'] = 'localhost'
@@ -30,13 +28,11 @@ mysql = MySQL(app)
 
 image_folder = os.path.abspath("static/images")
 
-mock_users_data = {"5":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
+mock_users_data = {"s6401012620234":{"name":"Supakorn","lastname":"Pholsiri","major":"Cpr.E","year":2,"password":generate_password_hash("123456")}}
 mock_admins_data = {"08spn491324619":{"name":"Supa","lastname":"Phol","depart":"Cpr.E","password":generate_password_hash("4567")}}
-mock_equipment_data = [
-    ("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), 
-    ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
+mock_equipment_data = [("456135461451","GRCD-4658131-4616","Generator","Electrical source","Unavailable","Robotic lab","456135461451.jpg"), ("545196164665","SUNWA-1962","Multimeter","Measurement","Available","Electrical lab","545196164665.jpeg")]
 mock_material_data = []
-mock_borrow_data = [("456135461451","5", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
+mock_borrow_data = [("456135461451","s6401012620234", date(2023,3,19).strftime('%Y-%m-%d'), date(2023,4,19).strftime('%Y-%m-%d'), "08spn491324619")]
 
 def find_account(user, password):
     #หา user ที่มี user_id ตรงกับ input โดยเรียกข้อมูล id และ รหัส
@@ -119,7 +115,7 @@ def equipments_lists():
     data = cursor.fetchall()
     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
     for eqm in data:
-        image_data = eqm[9]  # assuming that the image data is at index 7
+        image_data = eqm[9]  # assuming that the image data is at index 9
         if image_data:
             encoded_image = base64.b64encode(image_data).decode('utf-8')
         else:
@@ -154,7 +150,7 @@ def borrowed_equipments(sid):
                                     WHERE eq_borrow.s_id = (%s) AND eq_borrow.status='0' ''',(sid,))
                 data = cursor.fetchall()
                 for borrow in data:
-                    image_data = borrow[6]  # assuming that the image data is at index 7
+                    image_data = borrow[6]  
                     if image_data:
                         encoded_image = base64.b64encode(image_data).decode('utf-8')
                     else:
@@ -184,16 +180,18 @@ def admin_eqm_detail(admin_id):
                     response = []
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
-                    equipment.location, user.major, user.year, user.s_id , user.f_name, user.s_name
+                    equipment.location, equipment.img, user.major, user.year, user.s_id , user.f_name, user.s_name
                     FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
                     LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
                     data = cursor.fetchall()
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
                     for eqm in data:
-                        image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
-                        with open(image_name, 'rb') as image_file:
-                            encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
-                        name = eqm[9]," ",eqm[10]
+                        image_data = eqm[6]  
+                        if image_data:
+                            encoded_image = base64.b64encode(image_data).decode('utf-8')
+                        else:
+                            encoded_image = None
+                        name = eqm[10]," ",eqm[11]
                         response.append({   
                                             "id":eqm[0],
                                             "title":eqm[1],
@@ -201,9 +199,9 @@ def admin_eqm_detail(admin_id):
                                             "category":eqm[3],
                                             "status": eqm[4],
                                             "location": eqm[5],
-                                            "department":eqm[6],
-                                            "year":eqm[7],
-                                            "studentid": eqm[8],
+                                            "department":eqm[7],
+                                            "year":eqm[8],
+                                            "studentid": eqm[9],
                                             "image": encoded_image,
                                             "borrow_date":"borrow_date",
                                             "expiredate":"return_date",
@@ -241,9 +239,7 @@ def admin_eqm_detail(admin_id):
                                         SET `status` = 'Unavailable'
                                         WHERE `eq_id` = (%s)''', (eqm_id,))
                         mysql.connection.commit()
-
                         return {"msg":"Updated successfully"}
-                        
                         
                     return {"msg":"ERROR"}
  
@@ -253,16 +249,15 @@ def admin_eqm_detail(admin_id):
                     eqm_type = request.form['eqm_type']
                     category = request.form['category']
                     location = request.form['location']
-
-                    #---------------------------------------------------------
+                    image_file = request.files['image']
+                    image_data = io.BytesIO(image_file.read())
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT eq_id FROM equipment ''')
                     data = cursor.fetchall()
                     eq_id = [ temp[0] for temp in data ]
-
                     if not eqm_id in eq_id:
-                        cursor.execute('''INSERT INTO `equipment`(`eq_type`, `eq_name`, `eq_id`, `category`, `location`, `status`) 
-                        VALUES (%s,%s,%s,%s,%s,'Available')''',(eqm_type,title,eqm_id,category,location,))
+                        cursor.execute('''INSERT INTO `equipment`(`eq_type`, `eq_name`, `eq_id`, `category`, `location`, `status`,`img`) 
+                        VALUES (%s,%s,%s,%s,%s,'Available',%s)''',(eqm_type,title,eqm_id,category,location,image_data.getvalue(),))
                         mysql.connection.commit()
                         cursor.close()
                         return {"msg":"This equipment added successfully."}
