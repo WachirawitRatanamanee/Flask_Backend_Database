@@ -184,15 +184,17 @@ def admin_eqm_detail(admin_id):
                     response = []
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
-                    equipment.location, user.major, user.year, user.s_id , user.f_name, name.s_name
+                    equipment.location, user.major, user.year, user.s_id , user.f_name, user.s_name
                     FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
                     LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
                     data = cursor.fetchall()
+                    print(data)
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
                     for eqm in data:
                         image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
                         with open(image_name, 'rb') as image_file:
                             encoded_image = base64.b64encode(image_file.read()).decode('utf-8')
+                        name = eqm[9]," ",eqm[10]
                         response.append({   
                                             "id":eqm[0],
                                             "title":eqm[1],
@@ -205,8 +207,8 @@ def admin_eqm_detail(admin_id):
                                             "studentid": eqm[8],
                                             "image": encoded_image,
                                             "borrow_date":"borrow_date",
-                                            "expiredate":"return_date"
-                                            "name": eqm[9] + " " + eqm[10]
+                                            "expiredate":"return_date",
+                                            "name": name , 
                                         })
                     return jsonify(response)
                 
