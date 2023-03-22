@@ -151,7 +151,7 @@ def borrowed_equipments(sid):
                 cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category,
                                     equipment.location, equipment.status, equipment.img
                                     FROM eq_borrow INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
-                                    WHERE eq_borrow.s_id = (%s) ''',(sid,))
+                                    WHERE eq_borrow.s_id = (%s) AND eq_borrow.status='0' ''',(sid,))
                 data = cursor.fetchall()
                 for borrow in data:
                     image_data = borrow[6]  # assuming that the image data is at index 7
@@ -188,7 +188,6 @@ def admin_eqm_detail(admin_id):
                     FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
                     LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
                     data = cursor.fetchall()
-                    print(data)
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
                     for eqm in data:
                         image_name = os.path.abspath(os.path.join(image_folder,mock_equipment_data[0][6])) #mock
@@ -215,54 +214,23 @@ def admin_eqm_detail(admin_id):
                 if request.method == "PUT":
                     #ช่างหัวมันเรื่องรูป
                     print("PUT")
-                    title = request.form["title"]
-                    eqm_id = request.form["id"]
+                    eqm_id = request.form["eqm_id"]
                     status = request.form["status"]
-                    eqm_type = request.form["type"]
-                    category = request.form["category"]
-                    location = request.form["location"]
+                    s_id = request.form["s_id"]
+                    print(eqm_id,status,s_id)
                     if status == "Available":
-                        #ดึงข้อมูล eqm มา-------------------------------------------
-                        for num in range(len(mock_equipment_data)):
-                            if mock_equipment_data[num][0] == eqm_id:
-                                #ดึงข้อมูลการยืม eqm นี้มา (ใช้ ID เรียก)---------------------------
-                                #ถ้ามีให้ลบข้อมูลการยืมออก--------------------------------------
-                                if mock_equipment_data[num][4] == "Unavailable":
-                                    copy_borrow_data = mock_borrow_data.copy()  
-                                    for borrow in copy_borrow_data:
-                                        if borrow[0] == mock_equipment_data[num][0]:
-                                            mock_borrow_data.remove(borrow)
-                                    del copy_borrow_data
-
-                                #อัปเดทรายละเอียด equipment
-                                mock_equipment_data[num] = (eqm_id, title, category, eqm_type, status, location, "placeholder.png")
-                                return {"msg":"Updated successfully"}
-                            return {"msg":"The equipment doesn't exists"}
+                        cursor = mysql.connection.cursor()
+                        cursor.execute('''UPDATE `eq_borrow` INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
+                        SET eq_borrow.status='1', equipment.status = "Available"
+                        WHERE eq_borrow.eq_id = (%s) AND eq_borrow.s_id=(%s) AND eq_borrow.status = '0' ''',(eqm_id, s_id, ))
+                        mysql.connection.commit()
+                        return {"msg":"Updated successfully"}
                     elif status == "Unavailable":
-                        student_id = request.form["sid"]
-                        student_name = request.form["name"]
-                        borrow_date = request.form["Borrow_date"]
-                        return_date = request.form["Return_date"]
-                        #ดึง Student_id นี้จาก Database ถ้ามีทำงานต่อ ถ้าไม่มี return message
-                        if student_id not in mock_users_data:
-                            return {"msg":"This user doesn't exist."}
-                        #ดึงข้อมูล eqm มา-------------------------------------------
-                        for num in range(len(mock_equipment_data)):
-                            if mock_equipment_data[num][0] == eqm_id:
-                                #ดึงข้อมูลการยืม eqm นี้มา (ใช้ ID เรียก)---------------------------
-                                if mock_equipment_data[num][4] == "Available":
-                                    #เพิ่มข้อมูลการยืม (E_ID, S_ID, borrow_date, return_date, A_ID)
-                                    mock_borrow_data.append((mock_equipment_data[num][0], student_id, borrow_date, return_date, admin_id))
-                                elif mock_equipment_data[num][4] == "Unavailable":
-                                    #เปลี่ยนรายละเอียดการยืม
-                                    for i in range(len(mock_borrow_data)):
-                                        if mock_borrow_data[i][0] == mock_equipment_data[num][0]:
-                                            mock_borrow_data[i] = (mock_equipment_data[num][0], student_id, borrow_date, return_date, admin_id)
-                                #อัปเดทรายละเอียด equipment
-                                mock_equipment_data[num] = (eqm_id, title, category, eqm_type, status, location, "placeholder.png")
-                                return {"msg":"Update successfully"}
-                            return {"msg":"The equipment doesn't exists"}
-
+                        pass
+                        
+                        
+                    return {"msg":"ERROR"}
+ 
                 if request.method == "POST":
                     title = request.form['title']
                     eqm_id = request.form['eqm_id']
