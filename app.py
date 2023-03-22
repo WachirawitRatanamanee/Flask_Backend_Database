@@ -180,9 +180,9 @@ def admin_eqm_detail(admin_id):
                     response = []
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
-                    equipment.location, equipment.img, user.major, user.year, user.s_id , user.f_name, user.s_name
-                    FROM equipment LEFT JOIN eq_borrow ON equipment.eq_id = eq_borrow.eq_id 
-                    LEFT JOIN user ON eq_borrow.s_id = user.s_id   ''')
+                    equipment.location, equipment.s_id
+                    FROM equipment 
+                     ''')
                     data = cursor.fetchall()
                     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
                     for eqm in data:
@@ -191,22 +191,45 @@ def admin_eqm_detail(admin_id):
                             encoded_image = base64.b64encode(image_data).decode('utf-8')
                         else:
                             encoded_image = None
-                        name = eqm[10]," ",eqm[11]
-                        response.append({   
-                                            "id":eqm[0],
-                                            "title":eqm[1],
-                                            "type":eqm[2],
-                                            "category":eqm[3],
-                                            "status": eqm[4],
-                                            "location": eqm[5],
-                                            "department":eqm[7],
-                                            "year":eqm[8],
-                                            "studentid": eqm[9],
-                                            "image": encoded_image,
-                                            "borrow_date":"borrow_date",
-                                            "expiredate":"return_date",
-                                            "name": name , 
-                                        })
+                        
+                        if eqm[4] == "Unavailable":
+                            cursor.execute('''SELECT return_date
+                            FROM eq_borrow WHERE s_id =%s ''',(eqm[6],))
+                            eq_br = cursor.fetchall()
+                            cursor.execute('''SELECT f_name,s_name,year,major
+                            FROM user WHERE s_id =%s ''',(eqm[6],))
+                            user_info = cursor.fetchall()
+                            name = user_info[0][0]," ",user_info[0][1]
+                            response.append({   
+                                                "id":eqm[0],
+                                                "title":eqm[1],
+                                                "type":eqm[2],
+                                                "category":eqm[3],
+                                                "status": eqm[4],
+                                                "location": eqm[5],
+                                                "department":user_info[0][3] ,
+                                                "year":user_info[0][2],
+                                                "studentid": eqm[6],
+                                                "image": encoded_image,
+                                                "expiredate":eq_br[0][0],
+                                                "name": name , 
+                                            })
+                        else:
+                            response.append({   
+                                                "id":eqm[0],
+                                                "title":eqm[1],
+                                                "type":eqm[2],
+                                                "category":eqm[3],
+                                                "status": eqm[4],
+                                                "location": eqm[5],
+                                                "department":"-",
+                                                "year":"-",
+                                                "studentid": "-",
+                                                "image": encoded_image,
+                                                "borrow_date":"-",
+                                                "expiredate":"-",
+                                                "name": "-" , 
+                                            })
                     return jsonify(response)
                 
                 if request.method == "PUT":
@@ -219,7 +242,7 @@ def admin_eqm_detail(admin_id):
                     if status == "Available":
                         cursor = mysql.connection.cursor()
                         cursor.execute('''UPDATE `eq_borrow` INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
-                        SET eq_borrow.status='1', equipment.status = "Available"
+                        SET eq_borrow.status='1', equipment.status = "Available" , equipment.s_id = ""
                         WHERE eq_borrow.eq_id = (%s) AND eq_borrow.s_id=(%s) AND eq_borrow.status = '0' ''',(eqm_id, s_id, ))
                         mysql.connection.commit()
                         return {"msg":"Updated successfully"}
@@ -236,8 +259,8 @@ def admin_eqm_detail(admin_id):
 
                         cursor.execute('''
                                         UPDATE `equipment`
-                                        SET `status` = 'Unavailable'
-                                        WHERE `eq_id` = (%s)''', (eqm_id,))
+                                        SET `status` = 'Unavailable', s_id = (%s)
+                                        WHERE `eq_id` = (%s)''', (s_id,eqm_id,))
                         mysql.connection.commit()
                         return {"msg":"Updated successfully"}
                         
