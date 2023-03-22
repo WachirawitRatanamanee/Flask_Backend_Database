@@ -217,7 +217,7 @@ def admin_eqm_detail(admin_id):
                     eqm_id = request.form["eqm_id"]
                     status = request.form["status"]
                     s_id = request.form["s_id"]
-                    print(eqm_id,status,s_id)
+
                     if status == "Available":
                         cursor = mysql.connection.cursor()
                         cursor.execute('''UPDATE `eq_borrow` INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
@@ -225,8 +225,24 @@ def admin_eqm_detail(admin_id):
                         WHERE eq_borrow.eq_id = (%s) AND eq_borrow.s_id=(%s) AND eq_borrow.status = '0' ''',(eqm_id, s_id, ))
                         mysql.connection.commit()
                         return {"msg":"Updated successfully"}
+                    
                     elif status == "Unavailable":
-                        pass
+                        a_id = request.form["admin_id"]
+                        b_date = "0000-00-00"#request.form["borrow_id"]
+                        r_date = "0000-00-00"#request.form["return_id"]
+                        cursor = mysql.connection.cursor()
+                        cursor.execute('''INSERT INTO `eq_borrow` (`eq_id`, `s_id`, `borrow_date`, `return_date`, `approved_by`, `status`) 
+                                        VALUES (%s, %s, %s, %s, %s, '0')
+                                        ''', (eqm_id, s_id, b_date, r_date, a_id,))
+                        mysql.connection.commit()
+
+                        cursor.execute('''
+                                        UPDATE `equipment`
+                                        SET `status` = 'Unavailable'
+                                        WHERE `eq_id` = (%s)''', (eqm_id,))
+                        mysql.connection.commit()
+
+                        return {"msg":"Updated successfully"}
                         
                         
                     return {"msg":"ERROR"}
