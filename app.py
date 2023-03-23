@@ -272,18 +272,25 @@ def admin_eqm_detail(admin_id):
                         b_date = "0000-00-00"#request.form["borrow_id"]
                         r_date = "0000-00-00"#request.form["return_id"]
                         cursor = mysql.connection.cursor()
-                        cursor.execute('''INSERT INTO `eq_borrow` (`eq_id`, `s_id`, `borrow_date`, `return_date`, `approved_by`, `status`) 
-                                        VALUES (%s, %s, %s, %s, %s, '0')
-                                        ''', (eqm_id, s_id, b_date, r_date, a_id,))
-                        mysql.connection.commit()
-
-                        cursor.execute('''
-                                        UPDATE `equipment`
-                                        SET `status` = 'Unavailable', s_id = (%s)
-                                        WHERE `eq_id` = (%s)''', (s_id,eqm_id,))
-                        mysql.connection.commit()
-                        return {"msg":"Updated successfully"}
-                        
+                        cursor.execute('''SELECT s_id, f_name,s_name,year,major  
+                                            FROM user 
+                                            WHERE s_id = (%s) ''',(s_id,))
+                        data = cursor.fetchall()
+                        cursor.close()
+                        if data:
+                            cursor = mysql.connection.cursor()
+                            cursor.execute('''INSERT INTO `eq_borrow` (`eq_id`, `s_id`, `borrow_date`, `return_date`, `approved_by`, `status`) 
+                                            VALUES (%s, %s, %s, %s, %s, '0')
+                                            ''', (eqm_id, s_id, b_date, r_date, a_id,))
+                            mysql.connection.commit()
+                            cursor.execute('''
+                                            UPDATE `equipment`
+                                            SET `status` = 'Unavailable', s_id = (%s)
+                                            WHERE `eq_id` = (%s)''', (s_id,eqm_id,))
+                            mysql.connection.commit()
+                            return {"msg":"Updated successfully"}
+                        else:
+                            return {"msg": "no user"}, 404
                     return {"msg":"ERROR"}
  
                 if request.method == "POST":
@@ -354,6 +361,17 @@ def add_admin_member(admin_id):
                     return {"msg":f"Admin {newadmin_id} is added successfully"}
                 return {"msg":f"{newadmin_id} has been already registered"}
             return {"msg": "Unauthorized access"} , 401
+    except:
+        return {"msg": "Internal server error"}, 500
+
+@app.route("/<string:admin_id>/admin_control/delete_admin/", methods=["DELETE"])
+@jwt_required()
+def delete_admin_not_fill(admin_id):
+    try:
+        decoded = get_jwt()
+        if "sub" in decoded:
+            if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
+                return {"msg":f"Please fill the form."}
     except:
         return {"msg": "Internal server error"}, 500
 
