@@ -300,7 +300,7 @@ def admin_eqm_detail(admin_id):
                             mysql.connection.commit()
                             cursor.close()
                             return {"msg":"This equipment added successfully."}
-                        except:
+                        except: 
                             return {"msg":"No image OR Size is too large"},404
                     elif eqm_id == "undefined":
                         return {"msg":"Please fill ID "},404
