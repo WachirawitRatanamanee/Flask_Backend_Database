@@ -84,8 +84,8 @@ def register():
     year = request.form['year']
     student_id = request.form['sid']
     req_password = request.form['password']
-    if name == "" or lastname == "" or major == "" or year == "" \
-        or student_id == "" or req_password == "":
+    if name == "undefined" or lastname == "undefined" or major == "undefined" or year == "undefined" \
+        or student_id == "undefined" or req_password == "undefined":
         return {"msg":"There are some fields that you have left blank."}
     password = generate_password_hash(req_password)
     #ดึง user_id และ admin_id ทั้งหมด เพื่อหาว่าลงทะเบียนไปแล้วหรือไม่
@@ -271,6 +271,8 @@ def admin_eqm_detail(admin_id):
                         b_date = request.form["borrow_id"]
                         r_date = request.form["return_id"]
                         cursor = mysql.connection.cursor()
+                        if b_date > r_date :
+                            return {"msg":"Invalid date"},404
                         cursor.execute('''SELECT s_id, f_name,s_name,year,major  
                                             FROM user 
                                             WHERE s_id = (%s) ''',(s_id,))
@@ -376,7 +378,7 @@ def delete_admin_not_fill(admin_id):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
-                return {"msg":f"Please fill the form."}
+                return {"msg":f"Please fill the form."},404
     except:
         return {"msg": "Internal server error"}, 500
 
