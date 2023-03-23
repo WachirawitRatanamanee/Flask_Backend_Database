@@ -302,12 +302,18 @@ def admin_eqm_detail(admin_id):
                     eqm_type = request.form['eqm_type']
                     category = request.form['category']
                     location = request.form['location']
-                    image_file = request.files['image']
-                    image_data = io.BytesIO(image_file.read())
+                    try:
+                        image_file = request.files['image']
+                        image_data = io.BytesIO(image_file.read())
+                    except:
+                        image_data = None
+
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT eq_id FROM equipment ''')
                     data = cursor.fetchall()
+                    cursor.close()
                     eq_id = [ temp[0] for temp in data ]
+                    print("eqm_id = ",eqm_id)
                     if not eqm_id in eq_id:
                         try:
                             cursor.execute('''INSERT INTO `equipment`(`eq_type`, `eq_name`, `eq_id`, `category`, `location`, `status`,`img`) 
@@ -316,12 +322,11 @@ def admin_eqm_detail(admin_id):
                             cursor.close()
                             return {"msg":"This equipment added successfully."}
                         except:
-
-                            return {"msg":f"Image equipment size too large"}
+                            return {"msg":"No image OR Size is too large"}
+                    elif eqm_id == "undefined":
+                        return {"msg":"Please fill ID "}
                     else:
-                        cursor.close()
-                        return {"msg":f"This {eqm_id} has been already registered."}
-      
+                        return {"msg":"This ID has been already registered."}
     except:
         return {"msg": "Internal server error"}, 500
 
