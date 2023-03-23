@@ -99,20 +99,25 @@ def equipments_lists():
     response = []
     cursor = mysql.connection.cursor()
     cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category, equipment.status,
-                    equipment.location, equipment.s_id, equipment.img
-                    FROM equipment 
-                     ''')
+    equipment.location, equipment.s_id, equipment.img
+    FROM equipment 
+        ''')
     data = cursor.fetchall()
+    #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี และวันที่ให้ยืม กับวันที่คืน ถ้ามี
     for eqm in data:
-        image_data = eqm[7] 
+        image_data = eqm[7]  
         if image_data:
             encoded_image = base64.b64encode(image_data).decode('utf-8')
         else:
             encoded_image = None
         if eqm[4] == "Unavailable":
-            cursor.execute('''SELECT major,year
-                    FROM user WHERE s_id = (%s)''',(eqm[6],))
-            user_data = cursor.fetchall()
+            cursor.execute('''SELECT return_date
+            FROM eq_borrow WHERE s_id =%s AND eq_id =%s AND status="0" ''',(eqm[6],eqm[0],))
+            eq_br = cursor.fetchall()
+            cursor.execute('''SELECT f_name,s_name,year,major
+            FROM user WHERE s_id =%s ''',(eqm[6],))
+            user_info = cursor.fetchall()
+            name = user_info[0][0]," ",user_info[0][1]
             response.append({   
                                 "id":eqm[0],
                                 "title":eqm[1],
@@ -120,10 +125,12 @@ def equipments_lists():
                                 "category":eqm[3],
                                 "status": eqm[4],
                                 "location": eqm[5],
-                                "department":user_data[0][0],
-                                "year": user_data[0][1] ,
+                                "department":user_info[0][3] ,
+                                "year":user_info[0][2],
                                 "studentid": eqm[6],
-                                "image": encoded_image
+                                "image": encoded_image,
+                                "r_date":eq_br[0][0],
+                                "name": name , 
                             })
         else:
             response.append({   
@@ -134,9 +141,12 @@ def equipments_lists():
                                 "status": eqm[4],
                                 "location": eqm[5],
                                 "department":"-",
-                                "year": "-" ,
+                                "year":"-",
                                 "studentid": "-",
-                                "image": encoded_image
+                                "image": encoded_image,
+                                "borrow_date":"-",
+                                "r_date":"-",
+                                "name": "-" , 
                             })
     return jsonify(response)
 
@@ -151,12 +161,12 @@ def borrowed_equipments(sid):
                 response = []
                 cursor = mysql.connection.cursor()
                 cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category,
-                                    equipment.location, equipment.status, equipment.img, eq_borrow.borrow_date, return_date 
+                                    equipment.location, equipment.status, equipment.img, eq_borrow.borrow_date, eq_borrow.return_date 
                                     FROM eq_borrow INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
                                     WHERE eq_borrow.s_id = (%s) AND eq_borrow.status='0' ''',(sid,))
                 data = cursor.fetchall()
                 for borrow in data:
-                    image_data = borrow[6]  
+                    image_data = borrow[6]
                     if image_data:
                         encoded_image = base64.b64encode(image_data).decode('utf-8')
                     else:
@@ -257,7 +267,7 @@ def admin_eqm_detail(admin_id):
                         tz = timezone(timedelta(hours=7))
                         date_now = datetime.now(tz).date()
                         if (b_date == '' or r_date == ''):
-                            return {"msg":"Please selete date"}
+                            return {"msg":"Please selete date"},404
                         b_date_obj = datetime.strptime(b_date, '%Y-%m-%d').date()
                         r_date_obj = datetime.strptime(r_date, '%Y-%m-%d').date()
                         if (b_date > r_date or b_date_obj < date_now or r_date_obj < date_now):
@@ -361,7 +371,7 @@ def add_admin_member(admin_id):
                                         VALUES (%s,%s,%s,%s,'0') ''',(newadmin_id,password,name,lastname,))
                     mysql.connection.commit()
                     return {"msg":f"Admin {newadmin_id} is added successfully"} #registered admin complete
-                return {"msg":f"{newadmin_id} has been already registered"} #if admin registered
+                return {"msg":f"{newadmin_id} has been already registered"},404 #if admin registered
             return {"msg": "Unauthorized access"} , 401
     except:
         return {"msg": "Internal server error"}, 500
