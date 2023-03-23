@@ -124,8 +124,7 @@ def equipments_lists():
 
         if eqm[4] == "Unavailable":
             cursor.execute('''SELECT major,year
-                    FROM user 
-                     ''')
+                    FROM user WHERE s_id = (%s)''',(eqm[6],))
             user_data = cursor.fetchall()
             response.append({   
                                 "id":eqm[0],
@@ -136,7 +135,7 @@ def equipments_lists():
                                 "location": eqm[5],
                                 "department":user_data[0][0],
                                 "year": user_data[0][1] ,
-                                "studentid": eqm[5],
+                                "studentid": eqm[6],
                                 "image": encoded_image
                             })
         else:
@@ -179,8 +178,8 @@ def borrowed_equipments(sid):
                                         "title":borrow[1],
                                         "type":borrow[2],
                                         "category":borrow[3],
-                                        "status": borrow[4],
-                                        "location": borrow[5],
+                                        "status": borrow[5],
+                                        "location": borrow[4],
                                         "image": encoded_image
                                         })
                 return jsonify(response)
@@ -214,7 +213,7 @@ def admin_eqm_detail(admin_id):
                         
                         if eqm[4] == "Unavailable":
                             cursor.execute('''SELECT return_date
-                            FROM eq_borrow WHERE s_id =%s ''',(eqm[6],))
+                            FROM eq_borrow WHERE s_id =%s AND eq_id =%s AND status="0" ''',(eqm[6],eqm[0],))
                             eq_br = cursor.fetchall()
                             cursor.execute('''SELECT f_name,s_name,year,major
                             FROM user WHERE s_id =%s ''',(eqm[6],))
@@ -269,8 +268,8 @@ def admin_eqm_detail(admin_id):
                     
                     elif status == "Unavailable":
                         a_id = request.form["admin_id"]
-                        b_date = "0000-00-00"#request.form["borrow_id"]
-                        r_date = "0000-00-00"#request.form["return_id"]
+                        b_date = request.form["borrow_id"]
+                        r_date = request.form["return_id"]
                         cursor = mysql.connection.cursor()
                         cursor.execute('''SELECT s_id, f_name,s_name,year,major  
                                             FROM user 
