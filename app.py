@@ -288,9 +288,11 @@ def admin_eqm_detail(admin_id):
                                             WHERE `eq_id` = (%s)''', (s_id,eqm_id,))
                             mysql.connection.commit()
                             return {"msg":"Updated successfully"}
+                        elif s_id == "":
+                            return {"msg":"Please Fill Student Id"}, 404
                         else:
                             return {"msg": "no user"}, 404
-                    return {"msg":"ERROR"}
+                    return {"msg":"ERROR"}, 404
  
                 if request.method == "POST":
                     title = request.form['title']
@@ -305,11 +307,15 @@ def admin_eqm_detail(admin_id):
                     data = cursor.fetchall()
                     eq_id = [ temp[0] for temp in data ]
                     if not eqm_id in eq_id:
-                        cursor.execute('''INSERT INTO `equipment`(`eq_type`, `eq_name`, `eq_id`, `category`, `location`, `status`,`img`) 
-                        VALUES (%s,%s,%s,%s,%s,'Available',%s)''',(eqm_type,title,eqm_id,category,location,image_data.getvalue(),))
-                        mysql.connection.commit()
-                        cursor.close()
-                        return {"msg":"This equipment added successfully."}
+                        try:
+                            cursor.execute('''INSERT INTO `equipment`(`eq_type`, `eq_name`, `eq_id`, `category`, `location`, `status`,`img`) 
+                            VALUES (%s,%s,%s,%s,%s,'Available',%s)''',(eqm_type,title,eqm_id,category,location,image_data.getvalue(),))
+                            mysql.connection.commit()
+                            cursor.close()
+                            return {"msg":"This equipment added successfully."}
+                        except:
+
+                            return {"msg":f"Image equipment size too large"}
                     else:
                         cursor.close()
                         return {"msg":f"This {eqm_id} has been already registered."}
@@ -411,6 +417,7 @@ def sid():
     data = cursor.fetchall()
     if data:
         response.append({   
+                            "msg": "success",
                             "Name":data[0][1] + " "+ data[0][2] ,
                             "year":data[0][3],
                             "major":data[0][4],
