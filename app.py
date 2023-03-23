@@ -283,15 +283,18 @@ def admin_eqm_detail(admin_id):
                     eqm_type = request.form['eqm_type']
                     category = request.form['category']
                     location = request.form['location']
+                    if title == "undefined" or eqm_id =="undefined" or eqm_type == "undefined" or category == "undefined" or location == "undefined":
+                        return {"msg":"There are some fields that you have left blank."},404
                     try:
                         image_file = request.files['image']
                         image_data = io.BytesIO(image_file.read())
                     except:
                         image_data = None
+                    if image_data == None:
+                        return {"msg":"Please add image"},404
                     cursor = mysql.connection.cursor()
                     cursor.execute('''SELECT eq_id FROM equipment ''')
                     data = cursor.fetchall()
-                    cursor.close()
                     eq_id = [ temp[0] for temp in data ]
                     if not eqm_id in eq_id: #if item is not exists
                         try:
@@ -300,10 +303,8 @@ def admin_eqm_detail(admin_id):
                             mysql.connection.commit()
                             cursor.close()
                             return {"msg":"This equipment added successfully."}
-                        except:
-                            return {"msg":"No image OR Size is too large"},404
-                    elif eqm_id == "undefined":
-                        return {"msg":"Please fill ID "},404
+                        except: 
+                            return {"msg":"Image size is too large"},404
                     else:
                         return {"msg":"This ID has been already registered."},404
     except:
