@@ -116,7 +116,7 @@ def equipments_lists():
     print("eqm")
     #ดึงข้อมูล equipment ทั้งหมด และข้อมูล ID, Major/depart, ปี ของผู้ที่ยืมอยู่ ถ้ามี
     for eqm in data:
-        image_data = eqm[6]  # assuming that the image data is at index 9
+        image_data = eqm[7]  # assuming that the image data is at index 9
         if image_data:
             encoded_image = base64.b64encode(image_data).decode('utf-8')
         else:
