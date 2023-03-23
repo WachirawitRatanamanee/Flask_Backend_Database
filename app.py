@@ -151,7 +151,7 @@ def borrowed_equipments(sid):
                 response = []
                 cursor = mysql.connection.cursor()
                 cursor.execute('''SELECT equipment.eq_id, equipment.eq_name, equipment.eq_type, equipment.category,
-                                    equipment.location, equipment.status, equipment.img
+                                    equipment.location, equipment.status, equipment.img, eq_borrow.borrow_date, return_date 
                                     FROM eq_borrow INNER JOIN equipment ON eq_borrow.eq_id = equipment.eq_id 
                                     WHERE eq_borrow.s_id = (%s) AND eq_borrow.status='0' ''',(sid,))
                 data = cursor.fetchall()
@@ -167,7 +167,9 @@ def borrowed_equipments(sid):
                                         "category":borrow[3],
                                         "status": borrow[5],
                                         "location": borrow[4],
-                                        "image": encoded_image
+                                        "image": encoded_image,
+                                        "b_date": borrow[7],
+                                        "r_date": borrow[8]
                                         })
                 return jsonify(response)
             return {"msg":"Wrong User"}, 404
