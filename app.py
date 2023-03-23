@@ -252,9 +252,15 @@ def admin_eqm_detail(admin_id):
                         a_id = request.form["admin_id"]
                         b_date = request.form["borrow_id"]
                         r_date = request.form["return_id"]
-                        cursor = mysql.connection.cursor()
-                        if b_date > r_date :
+                        tz = timezone(timedelta(hours=7))
+                        date_now = datetime.now(tz).date()
+                        if (b_date == '' or r_date == ''):
+                            return {"msg":"Please selete date"}
+                        b_date_obj = datetime.strptime(b_date, '%Y-%m-%d').date()
+                        r_date_obj = datetime.strptime(r_date, '%Y-%m-%d').date()
+                        if (b_date > r_date or b_date_obj < date_now or r_date_obj < date_now):
                             return {"msg":"Invalid date"},404
+                        cursor = mysql.connection.cursor()
                         cursor.execute('''SELECT s_id, f_name,s_name,year,major  
                                             FROM user 
                                             WHERE s_id = (%s) ''',(s_id,))
