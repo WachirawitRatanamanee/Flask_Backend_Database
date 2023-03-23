@@ -371,7 +371,6 @@ def delete_admin_not_fill(admin_id):
         decoded = get_jwt()
         if "sub" in decoded:
             if decoded["sub"]["sid"] == admin_id and decoded["sub"]["role"] == "admin":
-                print("id")
                 return {"msg":f"Please fill the form."}
     except:
         return {"msg": "Internal server error"}, 500
